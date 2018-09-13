@@ -1,8 +1,1 @@
-C:/Users/jesse/Documents/Academics/ECE554/MiniProject1/ModelSim/spart.sv {1 {vlog -work work -sv -stats=none {C:\Users\jesse\Documents\Academics\ECE554\MiniProject1\ModelSim\spart.sv}
-Model Technology ModelSim - Intel FPGA Edition vlog 10.5b Compiler 2016.10 Oct  5 2016
--- Compiling module spart
 
-Top level modules:
-	spart
-
-} {} {}}

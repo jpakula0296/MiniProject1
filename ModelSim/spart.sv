@@ -22,8 +22,8 @@ module spart(
     input rst,
     input iocs,  // I/O chip select, basically enable in this project
     input iorw,	 // I/O Read Not Write bit
-    output rda,  // read data available
-    output tbr,  // 
+    output logic rda,  // read data available
+    output logic tbr,  // 
     input [1:0] ioaddr,
     inout [7:0] databus,
     output txd,
@@ -39,6 +39,7 @@ reg [15:0] rx_middle;
 reg [15:0] rx_middle_cnt;
 reg [3:0] rx_receive_cnt;
 reg [7:0] receive_buffer;
+reg [7:0] status;
 logic baud_empty;
 logic baud_cnt_en;
 logic rx_shift_en;
@@ -48,6 +49,7 @@ logic middle_found; // for checking we are at rxd line
 logic rx_middle_en;
 logic rx_receive_en;
 logic rx_buf_full;
+
 
 // states for SPART
 typedef enum reg [2:0] {IDLE, RX_FRONT_PORCH, RX, RX_BACK_PORCH, TX, BUFFER_WRITE} state_t;
@@ -134,7 +136,7 @@ always_comb begin
 	rx_shift_en = 1'b0;
 	tx_shift_en = 1'b0;
 	baud_cnt_en = 1'b0;
-//	rda = 1'b0;
+	rda = 1'b0;
 	
 	case(state)
 	
@@ -174,9 +176,8 @@ always_comb begin
 		// let processor know we have data ready
 		RX_BACK_PORCH:
 			begin
-//				rda= 1'b1;
+				rda= 1'b1;
 				next_state = IDLE;
-			
 			end
 			
 		
