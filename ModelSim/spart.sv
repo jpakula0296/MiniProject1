@@ -54,16 +54,19 @@ logic rx_tx_buf_full;
 logic transmit_buffer_en; // enables loading databus into transmission buffer
 logic receive_buffer_en;  // enables receiving of data to begin from IO device
 logic tx_begin;  // enables loading transmission buffer into tx_shift_reg
+<<<<<<< HEAD
 logic status_read; // high when reading status register for rda and tbr
+=======
+logic db_high_en;
+logic db_low_en;
+>>>>>>> Eric's-Work
 
 
 // states for SPART
-typedef enum reg [2:0] {IDLE, RX_FRONT_PORCH, RX, RX_BACK_PORCH, TX_LOAD, TX, BUFFER_WRITE} state_t;
+typedef enum reg [2:0] {IDLE, RX_FRONT_PORCH, RX, RX_BACK_PORCH, TX_LOAD, TX_FRONT_PORCH, TX, BUFFER_WRITE} state_t;
 state_t state, next_state;
 
-// IO addr states
-typedef enum reg [1:0] {RX_TX_BUFFER, STATUS_REGISTER, DB_LOW, DB_HIGH} io_state_t;
-io_state_t io_state, next_io_state;
+
 	
 	
 
@@ -79,10 +82,29 @@ always_ff @(posedge clk, negedge rst) begin
 		baud_cnt <= divisor_buffer;	// if we stop counting we want to reset to divisor buffer
 end
 
+<<<<<<< HEAD
 // status register has rda at bit 0, tbr bit 1, 0s elsewhere.
 assign status = {6'b000000, tbr, rda};
+=======
+always_ff @(posedge clk, negedge rst) begin
+	if(!rst)
+		division_buffer_high <= 8'b0;
+	else if(db_high_en)
+		division_buffer_high <= databus;
+	else
+		division_buffer_high <= division_buffer_high;
+end
 
-// TODO set up locations for division buffer info, needs to be writeable
+always_ff @(posedge clk, negedge rst) begin
+	if(!rst)
+		division_buffer_low <= 8'b0;
+	else if(db_low_en)
+		division_buffer_low <= databus;
+	else
+		division_buffer_low <= division_buffer_low;
+end
+>>>>>>> Eric's-Work
+
 // division buffer and baud rate signals
 assign baud_empty = !(|baud_cnt); // baud_empty when baud_cnt is 0 
 assign divisor_buffer = {division_buffer_high[7:0], division_buffer_low[7:0]}; // concatenate for buffer
@@ -108,7 +130,7 @@ always_ff @(posedge clk, negedge rst) begin
 	else if (rx_tx_cnt_en)
 		rx_tx_cnt <= rx_tx_cnt - 4'b1;
 	else
-		rx_tx_cnt <= 4'hA; // Don't we want this to latch and stay where it was?
+		rx_tx_cnt <= rx_tx_cnt; // Intentional latch
 end
 assign rx_tx_buf_full = (rx_tx_cnt == 4'h0);
 
@@ -138,7 +160,7 @@ always_ff @(posedge clk, negedge rst) begin
 	if (!rst)
 		transmit_buffer <= 8'b0;
 	else if (transmit_buffer_en)
-		transmit_buffer <= databus;
+		transmit_buffer <= databus;  
 	else
 		transmit_buffer <= transmit_buffer; // intentional latch
 end
@@ -162,35 +184,35 @@ end
 // rx_shift_en is HIGH in middle of bit being sent: sample in middle of signal
 // assign rx_shift_en = middle of bit being sent
 
-		//  Do we need to set up a state and next state for this?
-		//  I feel like flopping the ioaddr input may cause problems
-
 
 // TODO set default signal values
-always_comb begin
-	transmit_buffer_en = 1'b0;
+always @(posedge clk, negedge rst) begin
+	tbr = 1'b0;
 	receive_buffer_en = 1'b0;
+	db_high_en = 1'b0;
+	db_low_en = 1'b0;
 	case(ioaddr)
-		RX_TX_BUFFER:  
+		2'b00:  
 			begin
 				if(iorw)
 					receive_buffer_en <= 1'b1;
 				else
-					transmit_buffer_en <= 1'b1;
+					tbr <= 1'b1;
 			end
-		STATUS_REGISTER:  
+		2'b01:  
 			begin
 				if(iorw)
-					// TODO status register
+					;// TODO status register
 				else
+					;// nothing
 			end
-		DB_LOW:		
+		2'b10:		
 			begin
-				// TODO DB_LOW
+				db_low_en = 1'b1;
 			end
-		DB_HIGH:
+		2'b11:
 			begin
-				// TODO DB_HIGH
+				db_high_en = 1'b1;
 			end
 	endcase
 end
@@ -210,6 +232,7 @@ always_comb begin
 	rx_shift_en = 1'b0;
 	tx_shift_en = 1'b0;
 	tx_begin = 1'b0;
+	transmit_buffer_en = 1'b0;
 	baud_cnt_en = 1'b0;
 	rda = 1'b0;
 	
@@ -220,7 +243,7 @@ always_comb begin
 				if (receive_buffer_en & !rxd & iocs ) // only come out of IDLE if chip select is high
 					next_state = RX_FRONT_PORCH;
 				
-				else if (transmit_buffer_en & iocs)
+				else if (tbr & iocs)
 					next_state = TX_LOAD;
 				else
 					next_state = IDLE;
@@ -258,8 +281,13 @@ always_comb begin
 				else
 					next_state = RX;
 			end
-			
-		TX_LOAD: 
+		
+		TX_LOAD:
+			begin
+				transmit_buffer_en = 1'b1;
+				next_state = TX_FRONT_PORCH;
+			end
+		TX_FRONT_PORCH: 
 			begin
 				tx_begin = 1'b1;
 				next_state = TX;
