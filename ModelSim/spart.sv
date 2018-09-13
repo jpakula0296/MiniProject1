@@ -56,7 +56,6 @@ logic receive_buffer_en;  // enables receiving of data to begin from IO device
 logic tx_begin;  // enables loading transmission buffer into tx_shift_reg
 
 
-
 // states for SPART
 typedef enum reg [2:0] {IDLE, RX_FRONT_PORCH, RX, RX_BACK_PORCH, TX_LOAD, TX, BUFFER_WRITE} state_t;
 state_t state, next_state;
@@ -114,7 +113,7 @@ always_ff @(posedge clk, negedge rst) begin
 	if (!rst)
 		rx_shift_reg <= 10'b0;  // 0 on reset
 	else if (rx_shift_en)
-		rx_shift_reg <= {rxd, rx_shift_reg[9:1]}; // shift in rxd if enable high
+		rx_shift_reg <= {rxd, rx_shift_reg[9:1]}; // shift rxd from left if enable high
 	else 
 		rx_shift_reg <= rx_shift_reg; // intentional latch
 end
@@ -201,6 +200,7 @@ always_comb begin
 	tx_begin = 1'b0;
 	baud_cnt_en = 1'b0;
 	rda = 1'b0;
+	databus = 8'hzz; // high impedance on data bus until we have useful data
 	
 	case(state)
 	
@@ -220,8 +220,12 @@ always_comb begin
 			begin
 				rx_middle_en = 1'b1; // might need to have this in previous state on transition too.
 				if (middle_found) begin
-					rx_shift_en = 1'b1;
-					next_state = RX;
+					if (!rxd) begin // verify start bit is low
+						rx_shift_en = 1'b1;
+						next_state = RX; // start sampling data if we have low start bit
+					end
+					else 
+						next_state = IDLE; // back to IDLE if start bit was not low
 				end
 				else
 					next_state = RX_FRONT_PORCH;
@@ -236,7 +240,10 @@ always_comb begin
 					next_state = RX;
 				end
 				else if (rx_tx_buf_full) // receive buffer automatically latches on this signal
-					next_state = RX_BACK_PORCH;
+					if (receive_buffer[9]) // check that stop bit was high
+						next_state = RX_BACK_PORCH; // done processing this byte
+					else
+						next_state = IDLE; // go to IDLE if stop bit wasn't high
 				else
 					next_state = RX;
 			end
