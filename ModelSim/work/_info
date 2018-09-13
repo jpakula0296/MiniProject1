@@ -18,11 +18,11 @@ Z1 VDg1SIo80bB@j0V0VzS_@n1
 !s105 lab1_spart_sv_unit
 S1
 Z2 dI:/ECE554/SPART/ModelSim
-Z3 w1536868246
+w1536868246
 8I:/ECE554/SPART/ModelSim/lab1_spart.sv
 FI:/ECE554/SPART/ModelSim/lab1_spart.sv
 L0 6
-Z4 OV;L;10.4d;61
+Z3 OV;L;10.4d;61
 r1
 !s85 0
 31
@@ -30,27 +30,27 @@ r1
 !s107 I:/ECE554/SPART/ModelSim/lab1_spart.sv|
 !s90 -reportprogress|300|-work|work|-sv|-stats=none|I:/ECE554/SPART/ModelSim/lab1_spart.sv|
 !i113 1
-Z5 o-work work -sv
+Z4 o-work work -sv
 vspart
 R0
-!s110 1536868445
+!s110 1536879913
 !i10b 1
-!s100 0bzCT5gBN`jM6ZMRzgH;O2
-Ij]1J3=gZTNP^hzBBVD[dG2
+!s100 8TED<5aC^[Yo`bS4GkY8<1
+IS56QcihNPc1hh`PVYnCA]1
 R1
 !s105 spart_sv_unit
 S1
 R2
-R3
-8I:/ECE554/SPART/ModelSim/spart.sv
-FI:/ECE554/SPART/ModelSim/spart.sv
+w1536879907
+8I:\ECE554\SPART\ModelSim\spart.sv
+FI:\ECE554\SPART\ModelSim\spart.sv
 L0 20
-R4
+R3
 r1
 !s85 0
 31
-!s108 1536868445.000000
-!s107 I:/ECE554/SPART/ModelSim/spart.sv|
-!s90 -reportprogress|300|-work|work|-sv|-stats=none|I:/ECE554/SPART/ModelSim/spart.sv|
+!s108 1536879912.000000
+!s107 I:\ECE554\SPART\ModelSim\spart.sv|
+!s90 -reportprogress|300|-work|work|-sv|-stats=none|I:\ECE554\SPART\ModelSim\spart.sv|
 !i113 1
-R5
+R4
