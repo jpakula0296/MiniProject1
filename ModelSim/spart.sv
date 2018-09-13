@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
+// Company: UW Madison
+// Engineer: Jesse Pakula
 // 
 // Create Date:   
 // Design Name: 
@@ -51,15 +51,15 @@ logic rx_receive_en;
 logic rx_buf_full;
 
 
+
 // states for SPART
 typedef enum reg [2:0] {IDLE, RX_FRONT_PORCH, RX, RX_BACK_PORCH, TX, BUFFER_WRITE} state_t;
 state_t state, next_state;
+
+// IO addr states
+typedef enum reg [1:0] {TRANSMIT_BUFFER, STATUS_REGISTER, DB_LOW, DB_HIGH} io_state_t;
+io_state_t io_state, next_io_state;
 	
-// BAUD RATE CALCULATONS
-// 4800 = 1042 clocks
-// 9600 = 521 clocks
-// 19200 = 260 clocks
-// 38400 = 130 clocks
 
 // count down divisor buffer
 always_ff @(posedge clk, negedge rst) begin
@@ -129,6 +129,10 @@ end
 // assign rx_shift_en = middle of bit being sent
 
 // TODO set default signal values
+
+// case(ioaddr)
+
+	
 
 always_comb begin
 	next_state = IDLE; // default state

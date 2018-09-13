@@ -29,5 +29,19 @@ module driver(
     inout [7:0] databus
     );
 
+// instantiate DUT
+	
+	
+initial begin
+	clk = 1'b0;
+	rst = 1'b0; // start in reset
+	iocs = 1'b1; // don't select fpga yet
+	iorw = 1'b1; // start with read operation
+	ioaddr = 2'b00; // address is receive buffer
+	
+	
+	
+	
+	
 
 endmodule
