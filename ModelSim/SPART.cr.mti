@@ -1,1 +1,14 @@
+I:/ECE554/SPART/ModelSim/driver.sv {0 {vlog -work work -sv -stats=none I:/ECE554/SPART/ModelSim/driver.sv
+Model Technology ModelSim ALTERA vlog 10.4d Compiler 2015.12 Dec 30 2015
+-- Compiling module driver
+** Error: (vlog-13069) I:/ECE554/SPART/ModelSim/driver.sv(47): near "endmodule": syntax error, unexpected endmodule.
 
+
+} {4.0 5.0} {}} I:/ECE554/SPART/ModelSim/lab1_spart.sv {1 {vlog -work work -sv -stats=none I:/ECE554/SPART/ModelSim/lab1_spart.sv
+Model Technology ModelSim ALTERA vlog 10.4d Compiler 2015.12 Dec 30 2015
+-- Compiling module lab1_spart
+
+Top level modules:
+	lab1_spart
+
+} {} {}}
