@@ -77,8 +77,23 @@ always_ff @(posedge clk, negedge rst) begin
 		baud_cnt <= divisor_buffer;	// if we stop counting we want to reset to divisor buffer
 end
 
+always_ff @(posedge clk, negedge rst) begin
+	if(!rst)
+		division_buffer_high <= 8'b0;
+	else if(db_high_en)
+		division_buffer_high <= databus;
+	else
+		division_buffer_high <= division_buffer_high;
+end
 
-
+always_ff @(posedge clk, negedge rst) begin
+	if(!rst)
+		division_buffer_low <= 8'b0;
+	else if(db_low_en)
+		division_buffer_low <= databus;
+	else
+		division_buffer_low <= division_buffer_low;
+end
 
 // division buffer and baud rate signals
 assign baud_empty = !(|baud_cnt); // baud_empty when baud_cnt is 0 
