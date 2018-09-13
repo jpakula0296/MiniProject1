@@ -10,7 +10,7 @@ cModel Technology
 dC:/intelFPGA_lite/18.0
 vlab1_spart
 DXx6 sv_std 3 std 0 22 AD7iAPLo6nTIKk<N0eo=D3
-!s110 1536876321
+!s110 1536879759
 !i10b 1
 !s100 <T2QJ3T:9KUEo:n41REU10
 I6m_6H[aHY_5EZO2Of>YDB0
@@ -26,7 +26,7 @@ OV;L;10.5b;63
 r1
 !s85 0
 31
-!s108 1536876321.000000
+!s108 1536879759.000000
 !s107 C:/Users/jesse/Documents/Academics/ECE554/MiniProject1/ModelSim/lab1_spart.sv|
 !s90 -reportprogress|300|-work|work|-sv|-stats=none|C:/Users/jesse/Documents/Academics/ECE554/MiniProject1/ModelSim/lab1_spart.sv|
 !i113 1

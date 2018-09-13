@@ -54,6 +54,7 @@ logic rx_tx_buf_full;
 logic transmit_buffer_en; // enables loading databus into transmission buffer
 logic receive_buffer_en;  // enables receiving of data to begin from IO device
 logic tx_begin;  // enables loading transmission buffer into tx_shift_reg
+logic status_read; // high when reading status register for rda and tbr
 
 
 // states for SPART
@@ -63,6 +64,7 @@ state_t state, next_state;
 // IO addr states
 typedef enum reg [1:0] {RX_TX_BUFFER, STATUS_REGISTER, DB_LOW, DB_HIGH} io_state_t;
 io_state_t io_state, next_io_state;
+	
 	
 
 // count down divisor buffer
@@ -87,6 +89,7 @@ assign divisor_buffer = {division_buffer_high[7:0], division_buffer_low[7:0]}; /
 
 // TODO find better way to sample in middle of rx line, division is expensive
 assign rx_middle = divisor_buffer >> 1'b1; // will sample in middle of bits (divide by 2)
+
 // counter to determine middle_found
 always_ff @(posedge clk, negedge rst) begin
 	if (!rst)
@@ -192,7 +195,14 @@ always_comb begin
 	endcase
 end
 
-	
+always_comb begin
+	if (rda)
+		databus = receive_buffer;
+	else if (status_register_read)
+		databus = status;
+	else
+		databus = 8'bz;
+end	
 
 always_comb begin
 	next_state = IDLE; // default state
@@ -202,7 +212,6 @@ always_comb begin
 	tx_begin = 1'b0;
 	baud_cnt_en = 1'b0;
 	rda = 1'b0;
-	databus = 8'hzz; // high impedance on data bus until we have useful data
 	
 	case(state)
 	
@@ -269,10 +278,12 @@ always_comb begin
 					next_state = TX;
 					
 			end
+			
 		// let processor know we have data ready
 		RX_BACK_PORCH:
 			begin
 				rda= 1'b1;
+				// TODO put data on databus if need be
 				next_state = IDLE;
 			end
 			
