@@ -77,6 +77,8 @@ always_ff @(posedge clk, negedge rst) begin
 		baud_cnt <= divisor_buffer;	// if we stop counting we want to reset to divisor buffer
 end
 
+// status register has rda at bit 0, tbr bit 1, 0s elsewhere.
+assign status = {6'b000000, tbr, rda};
 
 // TODO set up locations for division buffer info, needs to be writeable
 // division buffer and baud rate signals
