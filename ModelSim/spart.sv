@@ -54,12 +54,13 @@ logic rx_tx_buf_full;
 logic transmit_buffer_en; // enables loading databus into transmission buffer
 logic receive_buffer_en;  // enables receiving of data to begin from IO device
 logic tx_begin;  // enables loading transmission buffer into tx_shift_reg
-<<<<<<< HEAD
+logic status_register_read;
+
 logic status_read; // high when reading status register for rda and tbr
-=======
+
 logic db_high_en;
 logic db_low_en;
->>>>>>> Eric's-Work
+
 
 
 // states for SPART
@@ -82,10 +83,10 @@ always_ff @(posedge clk, negedge rst) begin
 		baud_cnt <= divisor_buffer;	// if we stop counting we want to reset to divisor buffer
 end
 
-<<<<<<< HEAD
+
 // status register has rda at bit 0, tbr bit 1, 0s elsewhere.
 assign status = {6'b000000, tbr, rda};
-=======
+
 always_ff @(posedge clk, negedge rst) begin
 	if(!rst)
 		division_buffer_high <= 8'b0;
@@ -103,7 +104,6 @@ always_ff @(posedge clk, negedge rst) begin
 	else
 		division_buffer_low <= division_buffer_low;
 end
->>>>>>> Eric's-Work
 
 // division buffer and baud rate signals
 assign baud_empty = !(|baud_cnt); // baud_empty when baud_cnt is 0 
@@ -217,6 +217,7 @@ always @(posedge clk, negedge rst) begin
 	endcase
 end
 
+/* This block says its an illegal reference and we're not sure why.
 always_comb begin
 	if (rda)
 		databus = receive_buffer;
@@ -225,6 +226,7 @@ always_comb begin
 	else
 		databus = 8'bz;
 end	
+*/
 
 always_comb begin
 	next_state = IDLE; // default state
