@@ -42,6 +42,8 @@ reg [3:0] rx_tx_cnt;
 reg [7:0] receive_buffer;
 reg [7:0] transmit_buffer;
 reg [7:0] status;
+reg [7:0] read_data; // multiplexed output of receive buffer and status reg for databus read depending
+					 // on ioaddr
 logic baud_empty;
 logic baud_cnt_en;
 logic rx_shift_en;
@@ -55,8 +57,6 @@ logic transmit_buffer_en; // enables loading databus into transmission buffer
 logic receive_buffer_en;  // enables receiving of data to begin from IO device
 logic tx_begin;  // enables loading transmission buffer into tx_shift_reg
 logic status_register_read;
-logic read_data; // multiplexer output for what gets put on databus. either receive buffer or status reg
-
 logic status_read; // high when reading status register for rda and tbr
 
 logic db_high_en;
@@ -68,9 +68,15 @@ logic db_low_en;
 typedef enum reg [2:0] {IDLE, RX_FRONT_PORCH, RX, RX_BACK_PORCH, TX_LOAD, TX_FRONT_PORCH, TX, BUFFER_WRITE} state_t;
 state_t state, next_state;
 
+// put receive buffer or status reg (depending on ioaddr) on databus if read op
+// otherwise high z since SPART will be reading it
+assign databus = (iorw) ? read_data : 8'bz;
 
-	
-	
+// first bit of ioaddr is select signal for multiplexer, choosing between status reg and receive_buffer
+assign read_data = (ioaddr[0]) ? status : receive_buffer;
+
+// TODO: not sure if we need to be able to write to division buffers from here
+// seems like we should given there are ioaddr bits for high and low
 
 // count down divisor buffer
 always_ff @(posedge clk, negedge rst) begin
@@ -136,11 +142,13 @@ always_ff @(posedge clk, negedge rst) begin
 		rx_tx_cnt <= 4'hA; // always start at 10 for start bit, 8 data, then stop bit
 	else if (rx_tx_cnt_en)
 		rx_tx_cnt <= rx_tx_cnt - 4'h1; // count down on enable so we know when byte frame ends
+	else if (rx_tx_buf_full)
+		rx_tx_cnt <= 4'hA; // reload bit counter every time our buffer is full
 	else
 		rx_tx_cnt <= 4'hA; // reload 10 when enable goes low
 end
-assign rx_tx_buf_full = (rx_tx_cnt == 4'h0);
-assign rx_tx_cnt_en = rx_shift_en | tx_shift_en
+assign rx_tx_buf_full = (rx_tx_cnt == 4'h0); // signal buffer is full after stop bit
+assign rx_tx_cnt_en = rx_shift_en | tx_shift_en; // continue counting when bits are shifted
 
 
 // rx_shift_reg implementation
@@ -158,7 +166,7 @@ always_ff @(posedge clk, negedge rst) begin
 	if (!rst)
 		receive_buffer <= 8'b0;
 	else if (rx_tx_buf_full)
-		receive_buffer <= rx_shift_reg[8:1];
+		receive_buffer <= rx_shift_reg[8:1]; // data bits in middle, start/stop bits on end
 	else
 		receive_buffer <= receive_buffer; // intentional latch
 end
@@ -277,7 +285,7 @@ always_comb begin
 					next_state = RX;
 				end
 				else if (rx_tx_buf_full) // receive buffer automatically latches on this signal
-					if (receive_buffer[9]) // check that stop bit was high
+					if (rx_shift_reg[9]) // check that stop bit was high
 						next_state = RX_BACK_PORCH; // done processing this byte
 					else
 						next_state = IDLE; // go to IDLE if stop bit wasn't high
