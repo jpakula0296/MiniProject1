@@ -1,7 +1,9 @@
 Are I/O chip select and reset active low signals?
+A: Both the reset and cs design depend on you. Conventionally, the reset is active low, and the cs is active high.
 
 Does chip select need to be active for both read and write operations?
+A: The cs should be high when a data transfer is issued, otherwise set to low.
 
 What is the function of the driver? is it supposed to act as the processor,
 the test bench, or both?
-
+A: Actually, the testbench is just useful for your own testing with modelsim. It is not used during demo.
