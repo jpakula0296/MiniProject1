@@ -75,8 +75,7 @@ assign databus = (iorw) ? read_data : 8'bz;
 // first bit of ioaddr is select signal for multiplexer, choosing between status reg and receive_buffer
 assign read_data = (ioaddr[0]) ? status : receive_buffer;
 
-// TODO: not sure if we need to be able to write to division buffers from here
-// seems like we should given there are ioaddr bits for high and low
+// TODO: we need to be able to write to the division buffers from databus
 
 // count down divisor buffer
 always_ff @(posedge clk, negedge rst) begin
@@ -115,8 +114,6 @@ always_ff @(posedge clk, negedge rst) begin
 	else
 		division_buffer_low <= division_buffer_low;
 end
-
-
 
 // division buffer and baud rate signals
 assign baud_empty = (baud_cnt == 16'h0000); // baud_empty when baud_cnt is 0 

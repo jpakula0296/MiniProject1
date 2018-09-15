@@ -1,6 +1,7 @@
-How to handle tristating databus for reads/writes
-
 Are I/O chip select and reset active low signals?
 
 Does chip select need to be active for both read and write operations?
+
+What is the function of the driver? is it supposed to act as the processor,
+the test bench, or both?
 

@@ -28,20 +28,19 @@ module driver(
     output [1:0] ioaddr,
     inout [7:0] databus
     );
+ 
+// instatntiate SPART
+spart_DUT iDUT(.clk(clk), .rst(rst), .iocs(iocs), .iorw(iorw), .rda(rda), .tbr(tbr), .ioaddr(ioaddr), .databus(databus), .txd(txd), .rxd(rxd));
 
-// instantiate DUT
+// TODO: load starting divison buffer values on reset
+always_ff @(posedge clk, negedge rst) begin
+	if (!rst) begin
+		
 	
-	
-initial begin
-	clk = 1'b0;
-	rst = 1'b0; // start in reset
-	iocs = 1'b1; // don't select fpga yet
-	iorw = 1'b1; // start with read operation
-	ioaddr = 2'b00; // address is receive buffer
-	
-	
-	
-	
+	end
+
+
+end
 	
 
 endmodule
