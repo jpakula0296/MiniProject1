@@ -55,6 +55,7 @@ logic transmit_buffer_en; // enables loading databus into transmission buffer
 logic receive_buffer_en;  // enables receiving of data to begin from IO device
 logic tx_begin;  // enables loading transmission buffer into tx_shift_reg
 logic status_register_read;
+logic read_data; // multiplexer output for what gets put on databus. either receive buffer or status reg
 
 logic status_read; // high when reading status register for rda and tbr
 
@@ -78,7 +79,7 @@ always_ff @(posedge clk, negedge rst) begin
 	else if (baud_empty)
 		baud_cnt <= divisor_buffer;
 	else if (baud_cnt_en)
-		baud_cnt <= baud_cnt - 16'b1;  // only count if enable is on
+		baud_cnt <= baud_cnt - 16'h0001;  // only count if enable is on
 	else
 		baud_cnt <= divisor_buffer;	// if we stop counting we want to reset to divisor buffer
 end
@@ -87,8 +88,10 @@ end
 // status register has rda at bit 0, tbr bit 1, 0s elsewhere.
 assign status = {6'b000000, tbr, rda};
 
+// DB_HIGH flop, only load it from data bus when enable signal goes high for 1 clk cycle
 always_ff @(posedge clk, negedge rst) begin
 	if(!rst)
+		// TODO division buffer needs to load starting value based on DIP switches
 		division_buffer_high <= 8'b0;
 	else if(db_high_en)
 		division_buffer_high <= databus;
@@ -96,8 +99,10 @@ always_ff @(posedge clk, negedge rst) begin
 		division_buffer_high <= division_buffer_high;
 end
 
+// DB_LOW flop, only load on enable, otherwise hold value
 always_ff @(posedge clk, negedge rst) begin
 	if(!rst)
+		// TODO load correct starting value based on switches.
 		division_buffer_low <= 8'b0;
 	else if(db_low_en)
 		division_buffer_low <= databus;
@@ -105,14 +110,16 @@ always_ff @(posedge clk, negedge rst) begin
 		division_buffer_low <= division_buffer_low;
 end
 
+
+
 // division buffer and baud rate signals
-assign baud_empty = !(|baud_cnt); // baud_empty when baud_cnt is 0 
+assign baud_empty = (baud_cnt == 16'h0000); // baud_empty when baud_cnt is 0 
 assign divisor_buffer = {division_buffer_high[7:0], division_buffer_low[7:0]}; // concatenate for buffer
 
 // TODO find better way to sample in middle of rx line, division is expensive
 assign rx_middle = divisor_buffer >> 1'b1; // will sample in middle of bits (divide by 2)
 
-// counter to determine middle_found
+// counter to determine middle_found for correct sampling of rx
 always_ff @(posedge clk, negedge rst) begin
 	if (!rst)
 		rx_middle_cnt <= rx_middle;
@@ -123,16 +130,17 @@ always_ff @(posedge clk, negedge rst) begin
 end
 assign middle_found = (rx_middle_cnt == 0);
 
-// rx bit counter 
+// rx and bit counter, include start and stop bits.
 always_ff @(posedge clk, negedge rst) begin
 	if (!rst)
-		rx_tx_cnt <= 4'hA;
+		rx_tx_cnt <= 4'hA; // always start at 10 for start bit, 8 data, then stop bit
 	else if (rx_tx_cnt_en)
-		rx_tx_cnt <= rx_tx_cnt - 4'b1;
+		rx_tx_cnt <= rx_tx_cnt - 4'h1; // count down on enable so we know when byte frame ends
 	else
-		rx_tx_cnt <= rx_tx_cnt; // Intentional latch
+		rx_tx_cnt <= 4'hA; // reload 10 when enable goes low
 end
 assign rx_tx_buf_full = (rx_tx_cnt == 4'h0);
+assign rx_tx_cnt_en = rx_shift_en | tx_shift_en
 
 
 // rx_shift_reg implementation
@@ -196,6 +204,7 @@ always @(posedge clk, negedge rst) begin
 			begin
 				if(iorw)
 					receive_buffer_en <= 1'b1;
+					
 				else
 					tbr <= 1'b1;
 			end
@@ -217,16 +226,8 @@ always @(posedge clk, negedge rst) begin
 	endcase
 end
 
-/* This block says its an illegal reference and we're not sure why.
-always_comb begin
-	if (rda)
-		databus = receive_buffer;
-	else if (status_register_read)
-		databus = status;
-	else
-		databus = 8'bz;
-end	
-*/
+
+
 
 always_comb begin
 	next_state = IDLE; // default state
