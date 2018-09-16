@@ -204,6 +204,7 @@ always @(posedge clk, negedge rst) begin
 	receive_buffer_en = 1'b0;
 	db_high_en = 1'b0;
 	db_low_en = 1'b0;
+	status_read = 1'b0;
 	case(ioaddr)
 		2'b00:  
 			begin
@@ -216,7 +217,7 @@ always @(posedge clk, negedge rst) begin
 		2'b01:  
 			begin
 				if(iorw)
-					;// TODO status register
+					status_read = 1'b1;
 				else
 					;// nothing
 			end
