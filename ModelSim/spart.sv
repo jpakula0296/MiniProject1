@@ -54,7 +54,7 @@ logic middle_found; // for checking we are at rxd line
 logic rx_middle_en;
 logic rx_tx_cnt_en;
 logic rx_tx_buf_full;
-logic transmit_buffer_en; // enables loading databus into transmission buffer
+logic transmit_buffer_en = iocs & !iorw; // enables loading databus into transmission buffer
 logic receive_buffer_en;  // enables receiving of data to begin from IO device
 logic tx_begin;  // enables loading transmission buffer into tx_shift_reg
 logic status_register_read;
@@ -184,7 +184,7 @@ assign txd = tx_shift_reg[0];  // lsb will be consistently transmitted
 // tx_shift_reg implementation
 always_ff @(posedge clk, negedge rst) begin
 	if (!rst)
-		tx_shift_reg <= 10'b1111111111;  // all 1's on reset to hold txd high
+		tx_shift_reg <= 10'hFF;  // all 1's on reset to hold txd high
 	else if(tx_begin)
 		tx_shift_reg <= {1'b1, transmit_buffer, 1'b0};
 	else if (tx_shift_en)
@@ -193,13 +193,25 @@ always_ff @(posedge clk, negedge rst) begin
 		tx_shift_reg <= tx_shift_reg;  // intentional latch	
 end
 
+// we can write to the transmit buffer immediatley after the transmit shift reg latches, so tbr will start
+// high, go low after transmit_buffer_en, and go high after tx_begin
+// Basically an SR latch
+always @(posedge clk, negedge rst) begin
+	if (!rst) 
+		tbr <= 1'b1; // buffer is ready at the beginning
+	else if (transmit_buffer_en)
+		tbr <= 1'b0; // don't overwrite data until the shift register latches it 
+	else if (tx_begin)
+		tbr <= 1'b1; // we have moved data to shift reg, can accept new byte
+	else
+		tbr <= tbr; // intentional latch
+end
 // rx_shift_en is HIGH in middle of bit being sent: sample in middle of signal
 // assign rx_shift_en = middle of bit being sent
 
 
 // TODO set default signal values
 always @(posedge clk, negedge rst) begin
-	tbr = 1'b0;
 	receive_buffer_en = 1'b0;
 	db_high_en = 1'b0;
 	db_low_en = 1'b0;
@@ -209,9 +221,6 @@ always @(posedge clk, negedge rst) begin
 			begin
 				if(iorw)
 					receive_buffer_en <= 1'b1;
-					
-				else
-					tbr <= 1'b1;
 			end
 		2'b01:  
 			begin
@@ -308,11 +317,6 @@ always_comb begin
 					next_state = RX;
 			end
 		
-		TX_LOAD:
-			begin
-				transmit_buffer_en = 1'b1;
-				next_state = TX_FRONT_PORCH;
-			end
 		TX_FRONT_PORCH: 
 			begin
 				tx_begin = 1'b1;
