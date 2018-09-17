@@ -24,9 +24,13 @@ module spart(
     input iorw,	 // I/O Read Not Write bit
 	input rx_rdy, // from rx module, receive buffer latches shift reg on this signal
 	input [9:0] rx_shift_reg, // connected from rx module, latched when rx_rdy goes high
-	output logic [7:0] transmit_buffer, // tx module will latch this after write operation
-    output logic rda,  // receive data available right when rx module signal rx_rdy
-    output logic tbr,  // transmit buffer ready
+	output logic [7:0] transmit_buffer, // tx module will latch this after write operation to it
+	output logic tx_begin, // kicks off transmission when it goes high
+
+	// currently have rx and tx modules handling these but not sure if that will screw up things in demo
+    input rda,  // receive data available right when rx module signal rx_rdy
+    input tbr,  // transmit buffer ready
+	
 	output logic [15:0] divisor_buffer, // this is needed by rx/tx modules
     input [1:0] ioaddr,
     inout [7:0] databus
@@ -50,7 +54,6 @@ logic rx_tx_cnt_en;
 logic rx_tx_buf_full;
 logic transmit_buffer_en = iocs & !iorw; // enables loading databus into transmission buffer
 logic receive_buffer_en;  // enables receiving of data to begin from IO device
-logic tx_begin;  // enables loading transmission buffer into tx_shift_reg
 logic status_register_read;
 logic status_read; // high when reading status register for rda and tbr
 
@@ -63,10 +66,17 @@ spart_rx rx_mod(
 	.rst (rst),
 	.rxd (), // leave rxd unconnected since this comes from workstation, not connected to control
 	.divisor_buffer (divisor_buffer), // connect directly
-	.rx_rdy (rx_rdy),
+	.rda (rda),
 	.rx_shift_reg (rx_shift_reg));
 	
-// TODO: TX instantiation
+spart_tx tx_mod(
+	.clk (clk),
+	.rst (rst),
+	.tx_begin (tx_begin),
+	.transmit_buffer (transmit_buffer),
+	.tbr (tbr),
+	.divisor_buffer (divisor_buffer),
+	.txd ()); // connected to workstation, not the control unit
 
 // states for SPART
 typedef enum reg [3:0] {IDLE, READ, WRITE, TX_LOAD, TX_FRONT_PORCH, TX} state_t;
@@ -142,7 +152,7 @@ assign rx_tx_cnt_en =  tx_shift_en; // continue counting when bits are shifted
 always_ff @(posedge clk, negedge rst) begin
 	if (!rst)
 		receive_buffer <= 8'b0;
-	else if (rx_rdy)
+	else if (rda) // THIS MAY NEED TO BE DELAYED ONE CLOCK CYCLE
 		receive_buffer <= rx_shift_reg[8:1]; // data bits in middle, start/stop bits on end
 	else
 		receive_buffer <= receive_buffer; // intentional latch
@@ -172,21 +182,6 @@ always_ff @(posedge clk, negedge rst) begin
 	else
 		tx_shift_reg <= tx_shift_reg;  // intentional latch	
 end
-
-// we can write to the transmit buffer immediatley after the transmit shift reg latches, so tbr will start
-// high, go low after transmit_buffer_en, and go high after tx_begin
-// Basically an SR latch
-always @(posedge clk, negedge rst) begin
-	if (!rst) 
-		tbr <= 1'b1; // buffer is ready at the beginning
-	else if (transmit_buffer_en)
-		tbr <= 1'b0; // don't overwrite data until the shift register latches it 
-	else if (tx_begin)
-		tbr <= 1'b1; // we have moved data to shift reg, can accept new byte
-	else
-		tbr <= tbr; // intentional latch
-end
-
 
 always @(posedge clk, negedge rst) begin
 	receive_buffer_en = 1'b0;
@@ -226,6 +221,7 @@ always_comb begin
 	tx_begin = 1'b0;
 	transmit_buffer_en = 1'b0;
 	baud_cnt_en = 1'b0;
+	tx_begin = 1'b0;
 	
 	case(state)
 	
