@@ -7,6 +7,7 @@ module spart_tb();
 // declare all signals we will manipulate as type reg
 reg clk, rst, iocs, iorw;
 reg [1:0] ioaddr;
+reg [1:0] br_cfg;
 reg rxd;
 
 wire rda;
@@ -17,6 +18,7 @@ reg [7:0] baud_clk = 2604;
 
 
 // instantiate DUT
+/*
 spart control_DUT(
 	.clk (clk),
 	.rst (rst),
@@ -34,6 +36,7 @@ spart control_DUT(
 	.rxd(rxd),
 	.txd(txd)
 	);
+	*/
 	
 driver driver_DUT(
 	.clk (clk),
@@ -71,7 +74,14 @@ spart_tx tx_DUT(
 
 initial begin
 //////////////////////////////////  LOAD DIVISION BUFFER  /////////////////////
-	repeat (10) @(posedge clk);
+	clk = 1'b1;
+	rst = 1'b0; // start with reset asserted
+	br_cfg = 2'b11; // load fastest baud for testing
+	repeat (2) @(posedge clk);
+	
+	rst = 1'b1; // deassert
+	
+	repeat (10) @(posedge clk); // wait for division buffer to load
 	$stop;
 
 	

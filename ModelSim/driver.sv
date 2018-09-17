@@ -33,7 +33,7 @@ module driver(
  reg [7:0] write_data;
  
 // instatntiate SPART
-spart_DUT iDUT(.clk(clk), .rst(rst), .iocs(iocs), .iorw(iorw), .rda(rda), .tbr(tbr), .ioaddr(ioaddr), .databus(databus), .txd(txd), .rxd(rxd));
+spart iDUT(.clk(clk), .rst(rst), .iocs(iocs), .iorw(iorw), .rda(rda), .tbr(tbr), .ioaddr(ioaddr), .databus(databus), .txd(txd), .rxd(rxd));
 
 typedef enum reg [1:0] {DB_LOW_LOAD, DB_HIGH_LOAD, RUNNING} state_t;
 state_t state, next_state;
@@ -88,10 +88,10 @@ always_comb begin
 				
 		RUNNING: 
 			begin
-				
+				next_state = RUNNING;
 			
 			end
-		endcase
+	endcase
 end
 
 			/*

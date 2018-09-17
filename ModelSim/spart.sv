@@ -52,6 +52,12 @@ logic receive_buffer_en;  // enables receiving of data to begin from IO device
 logic status_register_read;
 logic status_read; // high when reading status register for rda and tbr
 
+
+
+// PUT HERE TO EXPERIMENT, NOT SURE WHY THIS ISN'T WRITING
+logic db_low_en;
+// wire write_data [7:0]; // for reading from databus on write operations
+
 // Instantiate rx and tx modules
 spart_rx rx_mod(
 	.clk (clk),
@@ -77,6 +83,7 @@ state_t state, next_state;
 // put receive buffer or status reg (depending on ioaddr) on databus if read op
 // otherwise high z since SPART will be reading it
 assign databus = (iorw) ? read_data : 8'bz;
+// assign write_data = databus [7:0];
 
 assign divisor_buffer = {division_buffer_high[7:0], division_buffer_low[7:0]}; // concatenate for buffer
 
@@ -98,12 +105,12 @@ always_ff @(posedge clk, negedge rst) begin
 		division_buffer_high <= division_buffer_high;
 end
 
-
+assign db_low_en = ioaddr[1] & ~ioaddr[0] & iocs & ~iorw;
 // DB_LOW flop, only load on enable, otherwise hold value
 always_ff @(posedge clk, negedge rst) begin
-	if(!rst)
+	if (!rst)
 		division_buffer_low <= 8'b0;
-	else if((ioaddr == 2'b10) && iocs && !iorw)
+	else if (db_low_en)
 		division_buffer_low <= databus;
 	else
 		division_buffer_low <= division_buffer_low;
