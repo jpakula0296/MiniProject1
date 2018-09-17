@@ -22,13 +22,12 @@ module spart(
     input rst,
     input iocs,  // I/O chip select, basically enable in this project
     input iorw,	 // I/O Read Not Write bit
-	input rx_rdy, // from rx module, receive buffer latches shift reg on this signal
-	input [9:0] rx_shift_reg, // connected from rx module, latched when rx_rdy goes high
+	input [9:0] rx_shift_reg, // connected from rx module, latched when rx_done goes high
 	output logic [7:0] transmit_buffer, // tx module will latch this after write operation to it
 	output logic tx_begin, // kicks off transmission when it goes high
 
 	input rx_done, // from rx module, latch shift reg in receive buffer and put rda high when asserted
-    output logic rda,  // receive data available right when rx module signal rx_rdy
+    output logic rda,  // receive data available right when rx module signal rx_done
     input tbr,  // transmit buffer ready
 	
 	output logic [15:0] divisor_buffer, // this is needed by rx/tx modules
@@ -125,6 +124,7 @@ always_ff @(posedge clk, negedge rst) begin
 	else
 		receive_buffer <= receive_buffer; // intentional latch
 end
+
 // rda high for one clock cycle when we latch rx_shift_reg
 always_ff @(posedge clk, negedge rst) begin
 	if (!rst)
@@ -134,4 +134,6 @@ always_ff @(posedge clk, negedge rst) begin
 	else 
 		rda <= 1'b0;
 end
+
+endmodule
 
