@@ -79,7 +79,7 @@ always @(negedge rst) begin
 	
 	iocs = 1'b0;
 	ioaddr = 2'b11;
-	databus = db_buffer[15:8]
+	databus = db_buffer[15:8];
 	
 	repeat(2) @(negedge clk);
 

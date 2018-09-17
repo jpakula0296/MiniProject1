@@ -13,6 +13,8 @@ parameter baud_clk = 2604;
 	driver_DUT dDUT(.clk(clk), .rst(rst), .br_cfg(br_cfg), .iocs(iocs), .iorw(iorw), .rda(rda), .tbr(tbr), .ioaddr(ioaddr), .databus(databus), .txd(txd), .rxd(rxd));
 	
 	initial begin
+///////////////////////////////////////////////////////////////////////////////
+//////////////// TRANSMIT TEST/////////////////////////////////////////////////
 		clk = 1'b0;
 		rst = 1'b0; // start in reset state
 		iocs = 1'b0; // start low to keep off
@@ -30,7 +32,7 @@ parameter baud_clk = 2604;
 		
 		repeat (1) @(posedge clk);
 		
-		repeat (baud_clk*15) @(posedge clk);
+		repeat (baud_clk*15) @(posedge clk); // 
 		$stop;
 	end
 	
