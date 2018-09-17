@@ -29,8 +29,7 @@ module driver(
     inout [7:0] databus
     );
  
- 
- reg [7:0] db_buffer;
+ reg [15:0] db_buffer;
  
 // instatntiate SPART
 spart_DUT iDUT(.clk(clk), .rst(rst), .iocs(iocs), .iorw(iorw), .rda(rda), .tbr(tbr), .ioaddr(ioaddr), .databus(databus), .txd(txd), .rxd(rxd));
@@ -70,7 +69,7 @@ always @(negedge rst) begin
 	
 	repeat(2) @(posedge clk);
 	
-	databus = db_buffer;
+	databus = db_buffer[7:0];
 	
 	repeat(2) @(posedge clk);
 	
@@ -78,11 +77,17 @@ always @(negedge rst) begin
 	
 	repeat(2) @(posedge clk);
 	
+	iocs = 1'b0;
+	ioaddr = 2'b11;
+	databus = db_buffer[15:8]
 	
+	repeat(2) @(posedge clk);
 
+	iocs = 1'b1;
 
-
-
+	repeat(2) @(posedge clk);
+	
+	
 
 
 
