@@ -20,32 +20,34 @@
 module spart(
     input clk,
     input rst,
-    input iocs,  // I/O chip select, basically enable in this project
-    input iorw,	 // I/O Read Not Write bit
-	input rx_rdy, // from rx module, receive buffer latches shift reg on this signal
-	input [9:0] rx_shift_reg, // connected from rx module, latched when rx_rdy goes high
-	output logic [7:0] transmit_buffer, // tx module will latch this after write operation
-    output logic rda,  // receive data available right when rx module signal rx_rdy
     output logic tbr,  // transmit buffer ready
-	output logic [15:0] divisor_buffer, // this is needed by rx/tx modules
-    input [1:0] ioaddr,
-    inout [7:0] databus
+    input [7:0] transmit_buffer,
+    output txd,
+    input rxd
     );
 	
 reg [15:0] baud_cnt;
-reg [9:0] tx_shift_reg;
 reg [7:0] division_buffer_low;
 reg [7:0] division_buffer_high;
+reg [15:0] divisor_buffer;
+reg [9:0] rx_shift_reg;
+reg [9:0] tx_shift_reg;
+reg [15:0] rx_middle;
+reg [15:0] rx_middle_cnt;
 reg [3:0] rx_tx_cnt;
 reg [7:0] receive_buffer;
+reg [7:0] transmit_buffer;
 reg [7:0] status;
 reg [7:0] read_data; // multiplexed output of receive buffer and status reg for databus read (ioaddr)
 reg [7:0] write_data; // multiplexed output of transmit buffer, DB(Low), and DB(High) based on ioaddr
 					 
 logic baud_empty;
 logic baud_cnt_en;
+logic rx_shift_en;
 logic tx_shift_en;
 logic clr;
+logic middle_found; // for checking we are at rxd line
+logic rx_middle_en;
 logic rx_tx_cnt_en;
 logic rx_tx_buf_full;
 logic transmit_buffer_en = iocs & !iorw; // enables loading databus into transmission buffer
@@ -57,19 +59,10 @@ logic status_read; // high when reading status register for rda and tbr
 logic db_high_en;
 logic db_low_en;
 
-// Instantiate rx and tx modules
-spart_rx rx_mod(
-	.clk (clk),
-	.rst (rst),
-	.rxd (), // leave rxd unconnected since this comes from workstation, not connected to control
-	.divisor_buffer (divisor_buffer), // connect directly
-	.rx_rdy (rx_rdy),
-	.rx_shift_reg (rx_shift_reg));
-	
-// TODO: TX instantiation
+
 
 // states for SPART
-typedef enum reg [3:0] {IDLE, READ, WRITE, TX_LOAD, TX_FRONT_PORCH, TX} state_t;
+typedef enum reg [3:0] {IDLE, READ, WRITE, RX_FRONT_PORCH, RX, RX_BACK_PORCH, TX_LOAD, TX_FRONT_PORCH, TX, BUFFER_WRITE} state_t;
 state_t state, next_state;
 
 // put receive buffer or status reg (depending on ioaddr) on databus if read op
@@ -122,6 +115,19 @@ end
 assign baud_empty = (baud_cnt == 16'h0000); // baud_empty when baud_cnt is 0 
 assign divisor_buffer = {division_buffer_high[7:0], division_buffer_low[7:0]}; // concatenate for buffer
 
+// TODO find better way to sample in middle of rx line, division is expensive
+assign rx_middle = divisor_buffer >> 1'b1; // will sample in middle of bits (divide by 2)
+
+// counter to determine middle_found for correct sampling of rx
+always_ff @(posedge clk, negedge rst) begin
+	if (!rst)
+		rx_middle_cnt <= rx_middle;
+	else if (rx_middle_en)
+		rx_middle_cnt <= rx_middle_cnt - 16'b1;
+	else 
+		rx_middle_cnt <= rx_middle; 
+end
+assign middle_found = (rx_middle_cnt == 0);
 
 // rx and bit counter, include start and stop bits.
 always_ff @(posedge clk, negedge rst) begin
@@ -135,14 +141,24 @@ always_ff @(posedge clk, negedge rst) begin
 		rx_tx_cnt <= 4'hA; // reload 10 when enable goes low
 end
 assign rx_tx_buf_full = (rx_tx_cnt == 4'h0); // signal buffer is full after stop bit
-assign rx_tx_cnt_en =  tx_shift_en; // continue counting when bits are shifted
+assign rx_tx_cnt_en = rx_shift_en | tx_shift_en; // continue counting when bits are shifted
 
+
+// rx_shift_reg implementation
+always_ff @(posedge clk, negedge rst) begin
+	if (!rst)
+		rx_shift_reg <= 10'b0;  // 0 on reset
+	else if (rx_shift_en)
+		rx_shift_reg <= {rxd, rx_shift_reg[9:1]}; // shift rxd from left if enable high
+	else 
+		rx_shift_reg <= rx_shift_reg; // intentional latch
+end
 
 // receive_buffer latches rx_shift data bits when rx_tx_buf_full is asserted
 always_ff @(posedge clk, negedge rst) begin
 	if (!rst)
 		receive_buffer <= 8'b0;
-	else if (rx_rdy)
+	else if (rx_tx_buf_full)
 		receive_buffer <= rx_shift_reg[8:1]; // data bits in middle, start/stop bits on end
 	else
 		receive_buffer <= receive_buffer; // intentional latch
@@ -186,8 +202,11 @@ always @(posedge clk, negedge rst) begin
 	else
 		tbr <= tbr; // intentional latch
 end
+// rx_shift_en is HIGH in middle of bit being sent: sample in middle of signal
+// assign rx_shift_en = middle of bit being sent
 
 
+// TODO set default signal values
 always @(posedge clk, negedge rst) begin
 	receive_buffer_en = 1'b0;
 	db_high_en = 1'b0;
@@ -222,10 +241,13 @@ end
 
 always_comb begin
 	next_state = IDLE; // default state
+	rx_middle_en = 1'b0;
+	rx_shift_en = 1'b0;
 	tx_shift_en = 1'b0;
 	tx_begin = 1'b0;
 	transmit_buffer_en = 1'b0;
 	baud_cnt_en = 1'b0;
+	rda = 1'b0;
 	
 	case(state)
 	
@@ -235,6 +257,9 @@ always_comb begin
 //					next_state = READ; NOT SURE IF READ STATE IS NEEDED
 				if (iocs & !iorw)
 					next_state = WRITE;
+				else if (!rxd) // should respond to getting data no matter what, getting data supercedes receiving
+					next_state = RX_FRONT_PORCH;
+					
 				else if (tbr & iocs) // Q: not sure if tbr needs to be a condition here
 					next_state = TX_LOAD;
 				
@@ -255,6 +280,38 @@ always_comb begin
 			
 			
 			end
+			
+		RX_FRONT_PORCH:
+			begin
+				rx_middle_en = 1'b1; // might need to have this in previous state on transition too.
+				if (middle_found) begin
+					if (!rxd) begin // verify start bit is low
+						rx_shift_en = 1'b1;
+						next_state = RX; // start sampling data if we have low start bit
+					end
+					else 
+						next_state = IDLE; // back to IDLE if start bit was not low
+				end
+				else
+					next_state = RX_FRONT_PORCH;
+			end
+		
+					
+		RX:
+			begin
+				baud_cnt_en = 1'b1;
+				if(baud_empty) begin
+					rx_shift_en = 1'b1;
+					next_state = RX;
+				end
+				else if (rx_tx_buf_full) // receive buffer automatically latches on this signal
+					if (rx_shift_reg[9]) // check that stop bit was high
+						next_state = RX_BACK_PORCH; // done processing this byte
+					else
+						next_state = IDLE; // go to IDLE if stop bit wasn't high
+				else
+					next_state = RX;
+			end
 		
 		TX_FRONT_PORCH: 
 			begin
@@ -274,7 +331,17 @@ always_comb begin
 				else
 					next_state = TX;
 					
-			end	
+			end
+			
+		// let processor know we have data ready
+		RX_BACK_PORCH:
+			begin
+				rda = 1'b1;
+				next_state = IDLE;
+			end
+			
+		
+				
 	endcase
 end
 
