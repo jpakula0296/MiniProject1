@@ -64,32 +64,52 @@ end
 always @(negedge rst) begin
 	iocs = 1'b0;
 	iorw = 1'b0;
-	ioaddr = 2'b10;  //division buffer low
+	ioaddr = 2'b10;  //division buffer low to start
 	databus = 8'b0;
 	
-	repeat(2) @(posedge clk);
+	repeat(2) @(negedge clk);
 	
 	databus = db_buffer[7:0];
 	
-	repeat(2) @(posedge clk);
+	repeat(2) @(negedge clk);
 	
 	iocs = 1'b1;
 	
-	repeat(2) @(posedge clk);
+	repeat(2) @(negedge clk);
 	
 	iocs = 1'b0;
 	ioaddr = 2'b11;
 	databus = db_buffer[15:8]
 	
-	repeat(2) @(posedge clk);
+	repeat(2) @(negedge clk);
 
 	iocs = 1'b1;
 
-	repeat(2) @(posedge clk);
+	repeat(2) @(negedge clk);
 	
+	iocs = 1'b0;
+	ioaddr = 2'b00;
+	databus = 8'b01101101;
 	
+	repeat(2) @(negedge clk);
+	
+	iocs = 1'b1;
+	while(!tbr);
+	
+	repeat(15) @(negedge clk);
+	
+	iocs = 1'b0;
+	iorw = 1'b1;
+	databus = 8'bzzzzzzzz;
+	
+	repeat(2) @(negedge clk);
+	
+	iocs = 1'b1;
+	while(!rda);
 
-
+	repeat(2) @(negedge clk);
+	
+	$stop;
 
 
 
