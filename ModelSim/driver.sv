@@ -86,7 +86,7 @@ always_comb begin
 				next_state = RUNNING;
 			end
 				
-		RUNNING: 
+		RUNNING: // this state should wait for rx input and then echo it back on txd for demo
 			begin
 				next_state = RUNNING;
 			
