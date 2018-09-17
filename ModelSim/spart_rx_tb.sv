@@ -8,14 +8,13 @@ module spart_rx_tb();
 reg clk, rst, iocs, iorw;
 reg [1:0] ioaddr;
 reg rxd;
-logic [7:0] databus;
 
 wire rda;
 reg [7:0] correct_value;
 
-parameter baud_clk = 2604;
-parameter DB_LOW = 8'b00001111; // no idea what this should be yet
-parameter DB_HIGH = 8'b00001111;
+
+reg [7:0] baud_clk = 2604;
+
 
 // instantiate DUT
 spart control_DUT(
@@ -35,7 +34,20 @@ spart control_DUT(
 	.rxd(rxd),
 	.txd(txd)
 	);
+	
+driver driver_DUT(
+	.clk (clk),
+	.rst (rst),
+	.br_cfg (br_cfg),
+	.iocs (iocs),
+	.iorw (iorw),
+	.rda (rda),
+	.tbr (tbr),
+	.ioaddr (ioaddr),
+	.databus (databus)
+	);
 
+/* hopefully we don't need to instantiate these since they are done in spart module
 spart_rx rx_DUT(
 	.clk (clk),
 	.rst (rst),
@@ -54,28 +66,12 @@ spart_tx tx_DUT(
 	.tbr (tbr),
 	.txd (txd)
 	);
+*/
 
 
 initial begin
 //////////////////////////////////  LOAD DIVISION BUFFER  /////////////////////
-	clk = 1'b0;		
-	rst = 1'b0; // start in reset
-	iocs = 1'b0; 
-	iorw = 1'b0; // write operation
-	ioaddr = 2'b10; // load DB_Low first
-	databus = DB_LOW;
-	
-	repeat (3) @(posedge clk);
-	rst = 1'b1; // come out of reset
-	repeat (3) @(posedge clk);
-	iocs = 1'b1; // assert chip select to begin loading division buffer values
-	repeat (2) @(posedge clk); // wait for write to occur
-	ioaddr = 2'b11; // load DB_HIGH next
-	databus = DB_HIGH;
-	repeat (2) @(posedge clk); // wait for write to occur
-	iocs = 1'b0; // deselect the system
-	databus = 8'bz; // high z databus
-	
+	repeat (10) @(posedge clk);
 	$stop;
 
 	
