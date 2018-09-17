@@ -14,8 +14,8 @@ wire rda;
 reg [7:0] correct_value;
 
 parameter baud_clk = 2604;
-parameter DB_LOW = 9999; // no idea what this should be yet
-parameter DB_HIGH = 9999;
+parameter DB_LOW = 8'b00001111; // no idea what this should be yet
+parameter DB_HIGH = 8'b00001111;
 
 // instantiate DUT
 spart control_DUT(
@@ -31,7 +31,9 @@ spart control_DUT(
 	.tbr (tbr),
 	.divisor_buffer (divisor_buffer),
 	.ioaddr (ioaddr),
-	.databus (databus)
+	.databus (databus),
+	.rxd(rxd),
+	.txd(txd)
 	);
 
 spart_rx rx_DUT(
@@ -61,7 +63,7 @@ initial begin
 	iocs = 1'b0; 
 	iorw = 1'b0; // write operation
 	ioaddr = 2'b10; // load DB_Low first
-	databus = DB_Low;
+	databus = DB_LOW;
 	
 	repeat (3) @(posedge clk);
 	rst = 1'b1; // come out of reset
@@ -73,7 +75,11 @@ initial begin
 	repeat (2) @(posedge clk); // wait for write to occur
 	iocs = 1'b0; // deselect the system
 	databus = 8'bz; // high z databus
+	
+	$stop;
 
+	
+///////////////////////// RX TEST //////////////////////////////////////////////
 	
 	repeat(baud_clk*3) @(negedge clk);	// delay start bit assertion
 	
@@ -141,6 +147,7 @@ $stop;
 
 end
 
+/*
 always @(posedge clk) begin
 	if (rda) begin
 		if (databus == correct_value)
@@ -149,6 +156,7 @@ always @(posedge clk) begin
 			$display("databus=%h , correct value=%h, FAIL",databus,correct_value);
 	end
 end
+*/
 
 always begin
 	#1 clk = ~clk;		// period 2 clock

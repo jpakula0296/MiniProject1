@@ -17,7 +17,7 @@
 // Additional Comments: 
 //
 //////////////////////////////////////////////////////////////////////////////////
-module spart(
+module spart_tx(
     input clk,
     input rst,
 	input tx_begin, // from rx module, receive buffer latches shift reg on this signal

@@ -34,6 +34,9 @@ module driver(
 // instatntiate SPART
 spart_DUT iDUT(.clk(clk), .rst(rst), .iocs(iocs), .iorw(iorw), .rda(rda), .tbr(tbr), .ioaddr(ioaddr), .databus(databus), .txd(txd), .rxd(rxd));
 
+typedef enum reg {DB_LOAD, RUNNING} state_t;
+state_t state, next_state;
+
 // TODO: load starting divison buffer values on reset
 always_ff @(posedge clk, negedge rst) begin
 	if (!rst) begin

@@ -32,7 +32,13 @@ module spart(
 	
 	output logic [15:0] divisor_buffer, // this is needed by rx/tx modules
     input [1:0] ioaddr,
-    inout [7:0] databus
+    inout [7:0] databus,
+	
+	// not sure how to handle having these lines in different modules with the wrapper
+	// just leaving them as are for now
+	input rxd,
+	output txd
+	
     );
 	
 reg [7:0] division_buffer_low;
@@ -50,7 +56,7 @@ logic status_read; // high when reading status register for rda and tbr
 spart_rx rx_mod(
 	.clk (clk),
 	.rst (rst),
-	.rxd (), // leave rxd unconnected since this comes from workstation, not connected to control
+	.rxd (rxd), // leave rxd unconnected since this comes from workstation, not connected to control
 	.divisor_buffer (divisor_buffer), // connect directly
 	.rx_done (rx_done),
 	.rx_shift_reg (rx_shift_reg));
@@ -62,7 +68,7 @@ spart_tx tx_mod(
 	.transmit_buffer (transmit_buffer),
 	.tbr (tbr),
 	.divisor_buffer (divisor_buffer),
-	.txd ()); // connected to workstation, not the control unit
+	.txd (txd)); // connected to workstation, not the control unit
 
 // states for SPART
 typedef enum reg [1:0] {IDLE, RECEIVE_READ, TRANSMIT_WRITE} state_t;
