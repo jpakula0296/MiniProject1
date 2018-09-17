@@ -27,8 +27,8 @@ module spart(
 	output logic [7:0] transmit_buffer, // tx module will latch this after write operation to it
 	output logic tx_begin, // kicks off transmission when it goes high
 
-	// currently have rx and tx modules handling these but not sure if that will screw up things in demo
-    input rda,  // receive data available right when rx module signal rx_rdy
+	input rx_done, // from rx module, latch shift reg in receive buffer and put rda high when asserted
+    output logic rda,  // receive data available right when rx module signal rx_rdy
     input tbr,  // transmit buffer ready
 	
 	output logic [15:0] divisor_buffer, // this is needed by rx/tx modules
@@ -53,7 +53,7 @@ spart_rx rx_mod(
 	.rst (rst),
 	.rxd (), // leave rxd unconnected since this comes from workstation, not connected to control
 	.divisor_buffer (divisor_buffer), // connect directly
-	.rda (rda),
+	.rx_done (rx_done),
 	.rx_shift_reg (rx_shift_reg));
 	
 spart_tx tx_mod(
@@ -120,20 +120,18 @@ end
 always_ff @(posedge clk, negedge rst) begin
 	if (!rst)
 		receive_buffer <= 8'b0;
-	else if (rda)
+	else if (rx_done)
 		receive_buffer <= rx_shift_reg[8:1]; // data bits in middle, start/stop bits on end
 	else
 		receive_buffer <= receive_buffer; // intentional latch
 end
-
-// state flop
+// rda high for one clock cycle when we latch rx_shift_reg
 always_ff @(posedge clk, negedge rst) begin
-	if (!rst) 
-		state <= IDLE;
+	if (!rst)
+		rda <= 1'b0;
+	else if (rx_done)
+		rda <= 1'b1;
 	else 
-		state <= next_state;
+		rda <= 1'b0;
 end
 
-
-
-endmodule
