@@ -66,7 +66,7 @@ spart_tx tx_mod(
 	.txd ()); // connected to workstation, not the control unit
 
 // states for SPART
-typedef enum reg [3:0] {IDLE, READ, WRITE} state_t;
+typedef enum reg [1:0] {IDLE, RECEIVE_READ, TRANSMIT_WRITE} state_t;
 state_t state, next_state;
 
 // put receive buffer or status reg (depending on ioaddr) on databus if read op
@@ -125,6 +125,15 @@ always_ff @(posedge clk, negedge rst) begin
 	else
 		receive_buffer <= receive_buffer; // intentional latch
 end
+
+// state flop
+always_ff @(posedge clk, negedge rst) begin
+	if (!rst) 
+		state <= IDLE;
+	else 
+		state <= next_state;
+end
+
 
 
 endmodule

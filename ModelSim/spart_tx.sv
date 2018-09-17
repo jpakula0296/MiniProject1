@@ -89,6 +89,14 @@ always_ff @(posedge clk, negedge rst) begin
 		tx_shift_reg <= tx_shift_reg;  // intentional latch	
 end
 
+// state flop
+always_ff @(posedge clk, negedge rst) begin
+	if (!rst)
+		state <= IDLE;
+	else
+		state <= next_state;
+end
+
 always_comb begin
 	next_state = IDLE; // default state
 	tx_shift_en = 1'b0;

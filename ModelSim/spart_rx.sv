@@ -98,6 +98,13 @@ always_ff @(posedge clk, negedge rst) begin
 		rx_shift_reg <= rx_shift_reg; // intentional latch
 end
 
+// state flop
+always_ff @(posedge clk, negedge rst) begin
+	if (!rst) 
+		state <= IDLE;
+	else 
+		state <= next_state;
+end
 
 always_comb begin
 	next_state = IDLE; // default state
