@@ -82,6 +82,7 @@ assign read_data = (ioaddr[0]) ? status : receive_buffer;
 // status register has rda at bit 0, tbr bit 1, 0s elsewhere.
 assign status = {6'b000000, tbr, rda};
 
+
 // DB_HIGH flop, only load it from data bus when enable signal goes high for 1 clk cycle
 always_ff @(posedge clk, negedge rst) begin
 	if(!rst)
@@ -92,6 +93,7 @@ always_ff @(posedge clk, negedge rst) begin
 		division_buffer_high <= division_buffer_high;
 end
 
+
 // DB_LOW flop, only load on enable, otherwise hold value
 always_ff @(posedge clk, negedge rst) begin
 	if(!rst)
@@ -100,6 +102,17 @@ always_ff @(posedge clk, negedge rst) begin
 		division_buffer_low <= databus;
 	else
 		division_buffer_low <= division_buffer_low;
+end
+
+
+// transmit buffer loads in data from databus when ioaddr enables it
+always_ff @(posedge clk, negedge rst) begin
+	if (!rst)
+		transmit_buffer <= 8'b0;
+	else if ((ioaddr == 2'b00) && iocs && !iorw && tbr)
+		transmit_buffer <= databus;  
+	else
+		transmit_buffer <= transmit_buffer; // intentional latch
 end
 
 
@@ -113,43 +126,5 @@ always_ff @(posedge clk, negedge rst) begin
 		receive_buffer <= receive_buffer; // intentional latch
 end
 
-// transmit buffer loads in data from databus when ioaddr enables it
-always_ff @(posedge clk, negedge rst) begin
-	if (!rst)
-		transmit_buffer <= 8'b0;
-	else if ((ioaddr == 2'b00) && iocs && !iorw && tbr)
-		transmit_buffer <= databus;  
-	else
-		transmit_buffer <= transmit_buffer; // intentional latch
-end
-
-
-
-
-always_comb begin
-	next_state = IDLE; // default state
-	tx_begin = 1'b0;
-	
-	case(state)
-	
-		IDLE:
-			begin
-				if (iocs & !iorw)
-					next_state = WRITE;
-				else if (iocs & iorw)
-					next_state = READ;
-				else
-					next_state = IDLE;
-			end
-			
-		READ:  
-			begin
-				
-			
-			
-			end
-		
-	endcase
-end
 
 endmodule
