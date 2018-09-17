@@ -42,8 +42,9 @@ reg [3:0] rx_tx_cnt;
 reg [7:0] receive_buffer;
 reg [7:0] transmit_buffer;
 reg [7:0] status;
-reg [7:0] read_data; // multiplexed output of receive buffer and status reg for databus read depending
-					 // on ioaddr
+reg [7:0] read_data; // multiplexed output of receive buffer and status reg for databus read (ioaddr)
+reg [7:0] write_data; // multiplexed output of transmit buffer, DB(Low), and DB(High) based on ioaddr
+					 
 logic baud_empty;
 logic baud_cnt_en;
 logic rx_shift_en;
@@ -65,7 +66,7 @@ logic db_low_en;
 
 
 // states for SPART
-typedef enum reg [2:0] {IDLE, RX_FRONT_PORCH, RX, RX_BACK_PORCH, TX_LOAD, TX_FRONT_PORCH, TX, BUFFER_WRITE} state_t;
+typedef enum reg [3:0] {IDLE, READ, WRITE, RX_FRONT_PORCH, RX, RX_BACK_PORCH, TX_LOAD, TX_FRONT_PORCH, TX, BUFFER_WRITE} state_t;
 state_t state, next_state;
 
 // put receive buffer or status reg (depending on ioaddr) on databus if read op
@@ -75,7 +76,6 @@ assign databus = (iorw) ? read_data : 8'bz;
 // first bit of ioaddr is select signal for multiplexer, choosing between status reg and receive_buffer
 assign read_data = (ioaddr[0]) ? status : receive_buffer;
 
-// TODO: we need to be able to write to the division buffers from databus
 
 // count down divisor buffer
 always_ff @(posedge clk, negedge rst) begin
@@ -178,7 +178,6 @@ always_ff @(posedge clk, negedge rst) begin
 		transmit_buffer <= transmit_buffer; // intentional latch
 end
 
-assign transmit_buffer_framed = {1'b1, transmit_buffer, 1'b0};  // framing the data for transmission
 
 assign txd = tx_shift_reg[0];  // lsb will be consistently transmitted
 
@@ -187,7 +186,7 @@ always_ff @(posedge clk, negedge rst) begin
 	if (!rst)
 		tx_shift_reg <= 10'b1111111111;  // all 1's on reset to hold txd high
 	else if(tx_begin)
-		tx_shift_reg <= transmit_buffer_framed;
+		tx_shift_reg <= {1'b1, transmit_buffer, 1'b0};
 	else if (tx_shift_en)
 		tx_shift_reg <= {1'b1, tx_shift_reg[9:1]};
 	else
@@ -249,13 +248,31 @@ always_comb begin
 	
 		IDLE:
 			begin
-				if (receive_buffer_en & !rxd & iocs ) // only come out of IDLE if chip select is high
+//				if (iocs & iorw)
+//					next_state = READ; NOT SURE IF READ STATE IS NEEDED
+				if (iocs & !iorw)
+					next_state = WRITE;
+				else if (!rxd) // should respond to getting data no matter what, getting data supercedes receiving
 					next_state = RX_FRONT_PORCH;
-				
-				else if (tbr & iocs)
+					
+				else if (tbr & iocs) // Q: not sure if tbr needs to be a condition here
 					next_state = TX_LOAD;
+				
 				else
 					next_state = IDLE;
+			end
+			
+/*		READ:  NOT SURE IF THIS IS NEEDED, THINK IT HAPPENS AUTOMATICALLY
+			begin
+				
+			
+			
+			end
+*/			
+		WRITE:
+			begin 
+				
+			
 			
 			end
 			
@@ -319,8 +336,7 @@ always_comb begin
 		// let processor know we have data ready
 		RX_BACK_PORCH:
 			begin
-				rda= 1'b1;
-				// TODO put data on databus if need be
+				rda = 1'b1;
 				next_state = IDLE;
 			end
 			

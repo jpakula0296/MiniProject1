@@ -1,16 +1,17 @@
 // Jesse Pakula & Blake Vandercar
 // ECE 551 Excercise 8
 
-// UART RX reciever testbench
+// UART rxdreciever testbench
 module spart_rx_tb();
 
 // declare all signals we will manipulate as type reg
 reg clk, rst, iocs, iorw;
 reg [1:0] br_cfg;
 reg [1:0] ioaddr;
+reg rxd;
 
-wire rx_rdy;
-wire [7:0] rx_data;
+wire rda;
+wire [7:0] databus;
 
 reg [7:0] correct_value;
 
@@ -26,68 +27,68 @@ initial begin
 	
 	repeat (3) @(negedge clk);
 	
-	rst_n = 1'b1;	// de-assert reset
-	rx = 1'b1;
+	rst = 1'b1;	// de-assert reset
+	rxd= 1'b1;
 	repeat(baud_clk*3) @(negedge clk);	// delay start bit assertion
 	
 	// transmit h'A5 as in example
 	correct_value = 8'hA5;
 	//start bit
-	rx = 1'b0;
+	rxd= 1'b0;
 	repeat(baud_clk) @(negedge clk);
 	// 10100101
-	rx = 1'b1;
+	rxd= 1'b1;
 	repeat(baud_clk) @(negedge clk);
-	rx = 1'b0;
+	rxd= 1'b0;
 	repeat(baud_clk) @(negedge clk);
-	rx = 1'b1;
+	rxd= 1'b1;
 	repeat(baud_clk) @(negedge clk);
-	rx = 1'b0;
+	rxd= 1'b0;
 	repeat (baud_clk*2) @(negedge clk);
-	rx = 1'b1;
+	rxd= 1'b1;
 	repeat (baud_clk) @(negedge clk);
-	rx = 1'b0;
+	rxd= 1'b0;
 	repeat (baud_clk) @(negedge clk);
-	rx = 1'b1;
+	rxd= 1'b1;
 	repeat (baud_clk) @(negedge clk);
 	// stop bit
-	rx = 1'b1;
+	rxd= 1'b1;
 	repeat (baud_clk*3) @(negedge clk);
 	
 	// transmit h'E7 as in example
 	correct_value = 8'hE7;
 	//start bit
-	rx = 1'b0;
+	rxd= 1'b0;
 	repeat(baud_clk) @(negedge clk);
 	// 11100111
-	rx = 1'b1;
+	rxd= 1'b1;
 	repeat(baud_clk*3) @(negedge clk);
-	rx = 1'b0;
+	rxd= 1'b0;
 	repeat(baud_clk*2) @(negedge clk);
-	rx = 1'b1;
+	rxd= 1'b1;
 	repeat(baud_clk*3) @(negedge clk);
 	// stop bit
-	rx = 1'b1;
+	rxd= 1'b1;
 	repeat (baud_clk) @(negedge clk);
 	
 	// transmit h'24 as in example
 	correct_value = 8'h24;
 	//start bit
-	rx = 1'b0;
+	rxd= 1'b0;
 	repeat(baud_clk) @(negedge clk);
 	// 00100100
-	rx = 1'b0;
+	rxd= 1'b0;
 	repeat(baud_clk*2) @(negedge clk);
-	rx = 1'b1;
+	rxd= 1'b1;
 	repeat(baud_clk) @(negedge clk);
-	rx = 1'b0;
+	rxd= 1'b0;
 	repeat(baud_clk*2) @(negedge clk);
-	rx = 1'b1;
+	rxd= 1'b1;
 	repeat (baud_clk) @(negedge clk);
-	rx = 1'b0;
+	rxd= 1'b0;
 	repeat(baud_clk*2) @(negedge clk);
 	// stop bit
-	rx = 1'b1;
+	rxd= 1'b1;
 	repeat (baud_clk) @(negedge clk);
 $stop;
 
@@ -95,11 +96,11 @@ $stop;
 end
 
 always @(posedge clk) begin
-	if (rx_rdy) begin
-		if (rx_data == correct_value)
-			$display("rx_data=%h , correct value=%h, PASS",rx_data,correct_value);
+	if (rda) begin
+		if (databus == correct_value)
+			$display("databus=%h , correct value=%h, PASS",databus,correct_value);
 		else
-			$display("rx_data=%h , correct value=%h, FAIL",rx_data,correct_value);
+			$display("databus=%h , correct value=%h, FAIL",databus,correct_value);
 	end
 end
 
