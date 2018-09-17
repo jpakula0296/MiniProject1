@@ -6,10 +6,9 @@ module spart_rx_tb();
 
 // declare all signals we will manipulate as type reg
 reg clk, rst, iocs, iorw;
-reg [1:0] br_cfg;
 reg [1:0] ioaddr;
 reg rxd;
-reg [7:0] databus;
+logic [7:0] databus;
 
 wire rda;
 reg [7:0] correct_value;
@@ -19,6 +18,41 @@ parameter DB_LOW = 9999; // no idea what this should be yet
 parameter DB_HIGH = 9999;
 
 // instantiate DUT
+spart control_DUT(
+	.clk (clk),
+	.rst (rst),
+	.iocs (iocs),
+	.iorw (iorw),
+	.rx_shift_reg (rx_shift_reg),
+	.transmit_buffer (transmit_buffer),
+	.tx_begin (tx_begin),
+	.rx_done (rx_done),
+	.rda (rda),
+	.tbr (tbr),
+	.divisor_buffer (divisor_buffer),
+	.ioaddr (ioaddr),
+	.databus (databus)
+	);
+
+spart_rx rx_DUT(
+	.clk (clk),
+	.rst (rst),
+	.rxd (rxd),
+	.divisor_buffer (divisor_buffer),
+	.rx_done (rx_done),
+	.rx_shift_reg (rx_shift_reg)
+	);
+	
+spart_tx tx_DUT(
+	.clk (clk),
+	.rst (rst),
+	.tx_begin (tx_begin),
+	.transmit_buffer (transmit_buffer),
+	.divisor_buffer (divisor_buffer),
+	.tbr (tbr),
+	.txd (txd)
+	);
+
 
 initial begin
 //////////////////////////////////  LOAD DIVISION BUFFER  /////////////////////
@@ -38,6 +72,7 @@ initial begin
 	databus = DB_HIGH;
 	repeat (2) @(posedge clk); // wait for write to occur
 	iocs = 1'b0; // deselect the system
+	databus = 8'bz; // high z databus
 
 	
 	repeat(baud_clk*3) @(negedge clk);	// delay start bit assertion

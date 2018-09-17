@@ -22,7 +22,7 @@ module spart_rx(
     input rst,
 	input rxd,
 	input [15:0] divisor_buffer, // determinces baud rate, loaded from control on power-cycle
-    output logic rda,  // receive data available
+    output logic rx_done,  // receive data available
 	output logic [9:0] rx_shift_reg
     );
 	
@@ -111,7 +111,7 @@ always_comb begin
 	rx_middle_en = 1'b0;
 	rx_shift_en = 1'b0;
 	baud_cnt_en = 1'b0;
-	rda = 1'b0;
+	rx_done = 1'b0;
 	
 	case(state)
 	
@@ -148,12 +148,12 @@ always_comb begin
 				end
 				else if (rx_buf_full) begin
 					if (rx_shift_reg[9]) begin // check that stop bit was high
-						 rda = 1'b1;   // receive buffer in control module will latch shift reg in receive buffer
+						 rx_done = 1'b1;   // receive buffer in control module will latch shift reg in receive buffer
 						next_state = IDLE; // done processing this byte
 					end
 				
 					else
-						next_state = IDLE; // don't signal rda if stop bit wasn't high
+						next_state = IDLE; // don't signal rx_done if stop bit wasn't high
 				end
 				else
 					next_state = RX;
