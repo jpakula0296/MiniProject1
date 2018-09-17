@@ -9,26 +9,37 @@ reg clk, rst, iocs, iorw;
 reg [1:0] br_cfg;
 reg [1:0] ioaddr;
 reg rxd;
+reg [7:0] databus;
 
 wire rda;
-wire [7:0] databus;
-
 reg [7:0] correct_value;
 
 parameter baud_clk = 2604;
+parameter DB_LOW = 9999; // no idea what this should be yet
+parameter DB_HIGH = 9999;
 
 // instantiate DUT
-spart_DUT iDUT(.clk(clk), .rst(rst), .iocs(iocs), .iorw(iorw), .rda(rda), .tbr(tbr), .ioaddr(ioaddr), .databus(databus), .txd(txd), .rxd(rxd));
-driver_DUT dDUT(.clk(clk), .rst(rst), .br_cfg(br_cfg), .iocs(iocs), .iorw(iorw), .rda(rda), .tbr(tbr), .ioaddr(ioaddr), .databus(databus), .txd(txd), .rxd(rxd));
 
 initial begin
-	clk = 1'b0;		// start with reset asserted
-	rst = 1'b0;
+//////////////////////////////////  LOAD DIVISION BUFFER  /////////////////////
+	clk = 1'b0;		
+	rst = 1'b0; // start in reset
+	iocs = 1'b0; 
+	iorw = 1'b0; // write operation
+	ioaddr = 2'b10; // load DB_Low first
+	databus = DB_Low;
 	
-	repeat (3) @(negedge clk);
+	repeat (3) @(posedge clk);
+	rst = 1'b1; // come out of reset
+	repeat (3) @(posedge clk);
+	iocs = 1'b1; // assert chip select to begin loading division buffer values
+	repeat (2) @(posedge clk); // wait for write to occur
+	ioaddr = 2'b11; // load DB_HIGH next
+	databus = DB_HIGH;
+	repeat (2) @(posedge clk); // wait for write to occur
+	iocs = 1'b0; // deselect the system
+
 	
-	rst = 1'b1;	// de-assert reset
-	rxd= 1'b1;
 	repeat(baud_clk*3) @(negedge clk);	// delay start bit assertion
 	
 	// transmit h'A5 as in example
