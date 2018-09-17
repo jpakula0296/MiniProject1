@@ -2,9 +2,12 @@
 // ECE 551 Excercise 8
 
 // UART RX reciever testbench
-module uart_rx_tb();
+module spart_rx_tb();
 
-reg clk, rst_n, rx;
+// declare all signals we will manipulate as type reg
+reg clk, rst, iocs, iorw;
+reg [1:0] br_cfg;
+reg [1:0] ioaddr;
 
 wire rx_rdy;
 wire [7:0] rx_data;
@@ -14,12 +17,13 @@ reg [7:0] correct_value;
 parameter baud_clk = 2604;
 
 // instantiate DUT
-uart_rx_DUT iDUT(.rx_data(rx_data), .rx_rdy(rx_rdy), .clk(clk), .rst_n(rst_n),.rx(rx));
-
+spart_DUT iDUT(.clk(clk), .rst(rst), .iocs(iocs), .iorw(iorw), .rda(rda), .tbr(tbr), .ioaddr(ioaddr), .databus(databus), .txd(txd), .rxd(rxd));
+driver_DUT dDUT(.clk(clk), .rst(rst), .br_cfg(br_cfg), .iocs(iocs), .iorw(iorw), .rda(rda), .tbr(tbr), .ioaddr(ioaddr), .databus(databus), .txd(txd), .rxd(rxd));
 
 initial begin
 	clk = 1'b0;		// start with reset asserted
-	rst_n = 1'b0;
+	rst = 1'b0;
+	
 	repeat (3) @(negedge clk);
 	
 	rst_n = 1'b1;	// de-assert reset

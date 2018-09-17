@@ -1,35 +1,36 @@
-module uart_tx_tb();
-	reg clk,rst_n;
-	reg tx_start;
-	reg [7:0]tx_data;
-	wire tx, tx_rdy;
+module spart_tx_tb();
+
+	// declare all signals we will manipulate as type reg
+	reg clk, rst, iocs, iorw;
+	reg [1:0] br_cfg;
+	reg [1:0] ioaddr;
+	reg [7:0] databus;
 	
-	parameter baud_clk  = 2604; 
+parameter baud_clk = 2604;
+
 	
-	uart_tx_DUT iDUT(.clk(clk), .rst_n(rst_n), .tx_start(tx_start), .tx_data(tx_data), .tx_rdy(tx_rdy), .tx(tx));
+	spart_DUT iDUT(.clk(clk), .rst(rst), .iocs(iocs), .iorw(iorw), .rda(rda), .tbr(tbr), .ioaddr(ioaddr), .databus(databus), .txd(txd), .rxd(rxd));
+	driver_DUT dDUT(.clk(clk), .rst(rst), .br_cfg(br_cfg), .iocs(iocs), .iorw(iorw), .rda(rda), .tbr(tbr), .ioaddr(ioaddr), .databus(databus), .txd(txd), .rxd(rxd));
 	
 	initial begin
 		clk = 1'b0;
-		rst_n = 1'b0;
-		tx_data = 8'b11001100;
-		tx_start = 1'b0;
+		rst = 1'b0; // start in reset state
+		iocs = 1'b0; // start low to keep off
+		iorw = 1'b0; // low for write operation
+		br_cfg = 2'b00;
+		ioaddr = 2'b00; // receive/transmit buffer as address
 		
 		repeat (5) @(posedge clk);
+		rst = 1'b1; // come out of reset
 		
-		rst_n = 1'b1;
 		repeat (5) @(posedge clk);
+		iocs = 1'b1; 
+		databus = 8'b11001100;
+		// watch tx line to make sure we spit out this pattern
 		
-		tx_start = 1'b1;
 		repeat (1) @(posedge clk);
-		tx_start = 1'b0;
-		repeat (baud_clk*15) @(posedge clk);
 		
-		tx_data = 8'b10100111;
-		tx_start = 1'b1;
-		repeat (1) @(posedge clk);
-		tx_start = 1'b0;
 		repeat (baud_clk*15) @(posedge clk);
-		
 		$stop;
 	end
 	

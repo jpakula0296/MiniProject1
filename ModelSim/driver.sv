@@ -29,6 +29,7 @@ module driver(
     inout [7:0] databus
     );
  
+ 
  reg [7:0] db_buffer;
  
 // instatntiate SPART
@@ -50,7 +51,7 @@ always_ff @(posedge clk, negedge rst) begin
 				begin
 				
 				end
-			2'b11
+			2'b11:
 				begin
 				
 				end
