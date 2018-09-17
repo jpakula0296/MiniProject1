@@ -2,7 +2,7 @@
 // ECE 551 Excercise 8
 
 // UART rxdreciever testbench
-module spart_rx_tb();
+module spart_tb();
 
 // declare all signals we will manipulate as type reg
 reg clk, rst, iocs, iorw;
