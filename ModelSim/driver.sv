@@ -21,16 +21,16 @@ module driver(
     input clk,
     input rst,
     input [1:0] br_cfg,
-    output iocs,
-    output iorw,
+    output logic iocs,
+    output logic iorw,
     input rda,
     input tbr,
-    output [1:0] ioaddr,
+    output logic [1:0] ioaddr,
     inout [7:0] databus
     );
  
  reg [15:0] db_buffer;
- wire [7:0] write_data;
+ reg [7:0] write_data;
  
 // instatntiate SPART
 spart_DUT iDUT(.clk(clk), .rst(rst), .iocs(iocs), .iorw(iorw), .rda(rda), .tbr(tbr), .ioaddr(ioaddr), .databus(databus), .txd(txd), .rxd(rxd));
@@ -42,13 +42,14 @@ state_t state, next_state;
 assign databus = (iocs & ~iorw) ? write_data : 8'bz;
 
 // TODO: MAKE SURE LOADED IN VALUES ARE CORRECT
-case(br_cfg)
-	2'b00: db_buffer = 16'd5208
-	2'b01: db_buffer = 16'd2604	
-	2'b10: db_buffer = 16'd1302
-	2'b11: db_buffer = 16'd651
-endcase
-	
+always_comb begin
+	case(br_cfg)
+		2'b00 : db_buffer = 16'd5208;
+		2'b01 : db_buffer = 16'd2604;
+		2'b10 : db_buffer = 16'd1302;
+		2'b11 : db_buffer = 16'd651;
+	endcase
+end
 	
 
 // state flop
@@ -64,7 +65,6 @@ always_comb begin
 	iocs = 1'b0;
 	iorw = 1'b0;
 	ioaddr = 2'b00;
-	databus = 8'b00000000;
 	
 	
 	case(state)
@@ -88,8 +88,10 @@ always_comb begin
 				
 		RUNNING: 
 			begin
+				
 			
 			end
+		endcase
 end
 
 			/*
