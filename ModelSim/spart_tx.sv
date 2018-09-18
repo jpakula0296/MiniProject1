@@ -36,9 +36,9 @@ reg [3:0] bit_cnt;
 logic baud_empty;
 logic baud_cnt_en;
 logic tx_shift_en;
-logic clr;
 logic bit_cnt_en;
 logic tx_buf_full;
+logic latch_transmit_buffer;
 
 
 // states for SPART
@@ -69,7 +69,7 @@ always_ff @(posedge clk, negedge rst) begin
 	else if (tx_buf_full)
 		bit_cnt <= 4'hA; // reload bit counter every time our buffer is full
 	else
-		bit_cnt <= 4'hA; // reload 10 when enable goes low
+		bit_cnt <= bit_cnt; // intentional latch
 end
 assign tx_buf_full = (bit_cnt == 4'h0); // signal buffer is full after stop bit
 assign bit_cnt_en =  tx_shift_en; // continue counting when bits are shifted
@@ -78,11 +78,21 @@ assign bit_cnt_en =  tx_shift_en; // continue counting when bits are shifted
 assign txd = tx_shift_reg[0];  // lsb will be consistently transmitted
 
 // tx_shift_reg implementation, latch transmit buffer after tx_begin
+// double flop tx_begin so we latch at the right time
+always_ff @(posedge clk, negedge rst) begin
+	if (!rst)
+		latch_transmit_buffer <= 1'b0;
+	else if (tx_begin)
+		latch_transmit_buffer <= 1'b1;
+	else 
+		latch_transmit_buffer <= 1'b0;
+end
+		
 always_ff @(posedge clk, negedge rst) begin
 	if (!rst)
 		tx_shift_reg <= 10'hFF;  // all 1's on reset to hold txd high
-	else if(tx_begin)
-		tx_shift_reg <= {1'b1, transmit_buffer, 1'b0};
+	else if(latch_transmit_buffer)
+		tx_shift_reg <= {1'b1, transmit_buffer[7:0], 1'b0};
 	else if (tx_shift_en)
 		tx_shift_reg <= {1'b1, tx_shift_reg[9:1]};
 	else
