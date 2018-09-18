@@ -1,16 +1,17 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company: UW Madison
-// Engineer: Jesse Pakula
+// Engineer: Jesse Pakula, Eric Christianson
 // 
-// Create Date:   
-// Design Name: 
+// Create Date:  9/11/2018
+// Design Name:  SPART
 // Module Name:    spart 
-// Project Name: 
+// Project Name: SPART
 // Target Devices: 
 // Tool versions: 
-// Description: 
+// Description: This module handles control logic to interface with rx and tx modules
+//					 and the driver
 //
-// Dependencies: 
+// Dependencies: driver.sv, spart_tx, spart_rx
 //
 // Revision: 
 // Revision 0.01 - File Created

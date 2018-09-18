@@ -1,16 +1,17 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company: UW Madison
-// Engineer: Jesse Pakula
+// Engineer: Jesse Pakula, Eric Christanson
 // 
-// Create Date:   
-// Design Name: 
-// Module Name:    spart 
-// Project Name: 
+// Create Date:   9/11/2018
+// Design Name:   spart
+// Module Name:    spart_tx 
+// Project Name: 	spart
 // Target Devices: 
 // Tool versions: 
-// Description: 
+// Description: TX module for SPART, basically a regular UART tx module with baud
+// 				 rate control from control unit
 //
-// Dependencies: 
+// Dependencies: spart.sv
 //
 // Revision: 
 // Revision 0.01 - File Created
@@ -23,22 +24,22 @@ module spart_tx(
 	input tx_begin, // from rx module, receive buffer latches shift reg on this signal
 	input [7:0] transmit_buffer, // tx module will latch this after write operation to it
 	input  [15:0] divisor_buffer, // this is needed by rx/tx modules
-	output logic tbr,
+	output logic tbr,// transmit buffer ready, high when we can accept new data to send
 	output logic txd
 	
     );
 	
-reg [15:0] baud_cnt;
-reg [9:0] tx_shift_reg;
-reg [3:0] bit_cnt;
+reg [15:0] baud_cnt; // counts down to determine baud rate
+reg [9:0] tx_shift_reg; // shifts data out to tx 
+reg [3:0] bit_cnt; // counts down from 10 to know when transaction is complete
 
 					 
-logic baud_empty;
-logic baud_cnt_en;
-logic tx_shift_en;
-logic bit_cnt_en;
-logic tx_buf_full;
-logic latch_transmit_buffer;
+logic baud_empty;	// indicates baud_cnt has hit 0
+logic baud_cnt_en; // baud_cnt decrements when high
+logic tx_shift_en; // tx_shift_reg shifts right to give tx next bit when this is high
+logic bit_cnt_en; // bit_cnt decrements when high
+logic tx_buf_full; // indicates buffer is full
+logic latch_transmit_buffer; // tx_shift_reg latches transmit buffer when high
 
 
 // states for SPART
@@ -50,7 +51,7 @@ always_ff @(posedge clk, negedge rst) begin
 	if (!rst)
 		baud_cnt <= divisor_buffer;
 	else if (baud_empty)
-		baud_cnt <= divisor_buffer;
+		baud_cnt <= divisor_buffer; // reset when empty
 	else if (baud_cnt_en)
 		baud_cnt <= baud_cnt - 16'h0001;  // only count if enable is on
 	else
@@ -127,9 +128,9 @@ always_comb begin
 		TX:
 			begin
 				
-				baud_cnt_en = 1'b1;
+				baud_cnt_en = 1'b1; // start generating baud rate
 				if(baud_empty) begin
-					tx_shift_en = 1'b1;
+					tx_shift_en = 1'b1; 
 					next_state = TX;
 				end
 				else if(tx_buf_full)

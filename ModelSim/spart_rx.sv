@@ -1,16 +1,16 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company: UW Madison
-// Engineer: Jesse Pakula
+// Engineer: Jesse Pakula, Eric Christanson
 // 
-// Create Date:   
-// Design Name: 
+// Create Date:   9/11/2018
+// Design Name:    spart
 // Module Name:    spart_rx 
-// Project Name: 
+// Project Name:   SPART 
 // Target Devices: 
 // Tool versions: 
-// Description: 
+// Description:  RX module with configurable baud rate based on control module
 //
-// Dependencies: 
+// Dependencies: spart.sv
 //
 // Revision: 
 // Revision 0.01 - File Created
@@ -18,25 +18,24 @@
 //
 //////////////////////////////////////////////////////////////////////////////////
 module spart_rx(
-    input clk,
-    input rst,
-	input rxd,
-	input [15:0] divisor_buffer, // determinces baud rate, loaded from control on power-cycle
-    output logic rx_done,  // receive data available
+	input clk,
+   input rst,
+	input rxd, // rx line to sample bits from and shift into rx_shift_reg
+	input [15:0] divisor_buffer, // determinces baud rate, loaded from control on reset
+   output logic rx_done,  // high when valid data is in rx_shift reg
 	output logic [9:0] rx_shift_reg
     );
 	
-reg [15:0] baud_cnt;
-reg [15:0] rx_middle;
-reg [15:0] rx_middle_cnt;
-reg [3:0] bit_cnt;
+reg [15:0] baud_cnt; // loads divisor buffer and decrements to generate baud rate
+reg [15:0] rx_middle; // high when we found middle of bit to sample it
+reg [15:0] rx_middle_cnt; // half of baud rate for finding middle of bit
+reg [3:0] bit_cnt; // decrements from 10, when it hits 0 a byte has been transferred
 					 
-logic baud_empty;
-logic baud_cnt_en;
-logic rx_shift_en;
-logic clr;
+logic baud_empty; // indicates we should shift next bit in
+logic baud_cnt_en; // baud_cnt decrements when high
+logic rx_shift_en; // rx_shift_reg shifts rx in from right when high
 logic middle_found; // for checking we are at rxd line
-logic rx_middle_en;
+logic rx_middle_en; // middle_cnt decrements when high 
 logic rx_buf_full;
 
 
@@ -108,7 +107,9 @@ end
 
 always_comb begin
 	next_state = IDLE; // default state
-	rx_middle_en = 1'b0;
+	
+	// keep counters idle until transaction starts
+	rx_middle_en = 1'b0; 
 	rx_shift_en = 1'b0;
 	baud_cnt_en = 1'b0;
 	rx_done = 1'b0;
@@ -123,9 +124,9 @@ always_comb begin
 					next_state = IDLE;
 			end
 			
-		RX_FRONT_PORCH:
+		RX_FRONT_PORCH: // this state waits until we find the middle of the start bit and verifies it is low before continuing
 			begin
-				rx_middle_en = 1'b1; // might need to have this in previous state on transition too.
+				rx_middle_en = 1'b1; 
 				if (middle_found) begin
 					if (!rxd) begin // verify start bit is low
 						rx_shift_en = 1'b1;
@@ -135,15 +136,15 @@ always_comb begin
 						next_state = IDLE; // back to IDLE if start bit was not low
 				end
 				else
-					next_state = RX_FRONT_PORCH;
+					next_state = RX_FRONT_PORCH; // cycle back until middle is found
 			end
 		
 					
 		RX:
 			begin
-				baud_cnt_en = 1'b1;
+				baud_cnt_en = 1'b1; // start generating baud rate
 				if(baud_empty) begin
-					rx_shift_en = 1'b1;
+					rx_shift_en = 1'b1; // shift when baud counter is empty
 					next_state = RX;
 				end
 				else if (rx_buf_full) begin
