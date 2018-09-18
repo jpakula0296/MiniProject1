@@ -2,3 +2,4 @@
 /ModelSim/*.mpf
 /ModelSim/*.mti
 /ModelSim/vsim*
+/ModelSim/*.vstf

@@ -14,12 +14,21 @@ wire rda;
 reg [7:0] correct_value;
 
 
-reg [7:0] baud_clk = 2604;
-
-
-// instantiate DUT
-/*
-spart control_DUT(
+reg [7:0] baud_clk = 651;
+	
+driver driver_DUT(
+	.clk (clk),
+	.rst (rst),
+	.br_cfg (br_cfg),
+	.iocs (iocs),
+	.iorw (iorw),
+	.rda (rda),
+	.tbr (tbr),
+	.ioaddr (ioaddr),
+	.databus (databus)
+	);
+	
+spart spart_DUT(
 	.clk (clk),
 	.rst (rst),
 	.iocs (iocs),
@@ -33,24 +42,11 @@ spart control_DUT(
 	.divisor_buffer (divisor_buffer),
 	.ioaddr (ioaddr),
 	.databus (databus),
-	.rxd(rxd),
-	.txd(txd)
-	);
-	*/
-	
-driver driver_DUT(
-	.clk (clk),
-	.rst (rst),
-	.br_cfg (br_cfg),
-	.iocs (iocs),
-	.iorw (iorw),
-	.rda (rda),
-	.tbr (tbr),
-	.ioaddr (ioaddr),
-	.databus (databus)
+	.txd (txd),
+	.rxd (rxd)
 	);
 
-/* hopefully we don't need to instantiate these since they are done in spart module
+/*
 spart_rx rx_DUT(
 	.clk (clk),
 	.rst (rst),
@@ -81,13 +77,11 @@ initial begin
 	
 	rst = 1'b1; // deassert
 	
-	repeat (10) @(posedge clk); // wait for division buffer to load
-	$stop;
+	repeat (4) @(posedge clk); // wait for division buffer to load
 
 	
 ///////////////////////// RX TEST //////////////////////////////////////////////
 	
-	repeat(baud_clk*3) @(negedge clk);	// delay start bit assertion
 	
 	// transmit h'A5 as in example
 	correct_value = 8'hA5;
@@ -111,7 +105,8 @@ initial begin
 	repeat (baud_clk) @(negedge clk);
 	// stop bit
 	rxd= 1'b1;
-	repeat (baud_clk*3) @(negedge clk);
+	repeat (baud_clk*5) @(negedge clk);
+	$stop;
 	
 	// transmit h'E7 as in example
 	correct_value = 8'hE7;

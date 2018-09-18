@@ -29,13 +29,12 @@ module driver(
     inout [7:0] databus
     );
  
- reg [15:0] db_buffer;
- reg [7:0] write_data;
+reg [15:0] db_buffer;
+logic [7:0] write_data; // multiplexed in state machine between db_buffer and read_reg
+reg [7:0] read_reg; // will latch receive buffer on rda and send back to transmit buffer
+reg read_en;
  
-// instatntiate SPART
-spart iDUT(.clk(clk), .rst(rst), .iocs(iocs), .iorw(iorw), .rda(rda), .tbr(tbr), .ioaddr(ioaddr), .databus(databus), .txd(txd), .rxd(rxd));
-
-typedef enum reg [1:0] {DB_LOW_LOAD, DB_HIGH_LOAD, RUNNING} state_t;
+typedef enum reg [2:0] {DB_LOW_LOAD, DB_HIGH_LOAD, IDLE, READ, WRITE} state_t;
 state_t state, next_state;
 
 // tristate databus on read operations or when not selected
@@ -44,13 +43,22 @@ assign databus = (iocs & ~iorw) ? write_data : 8'bz;
 // TODO: MAKE SURE LOADED IN VALUES ARE CORRECT
 always_comb begin
 	case(br_cfg)
-		2'b00 : db_buffer = 16'd5208;
-		2'b01 : db_buffer = 16'd2604;
-		2'b10 : db_buffer = 16'd1302;
-		2'b11 : db_buffer = 16'd651;
+		2'b00 : db_buffer = 16'd1042; // 
+		2'b01 : db_buffer = 16'd521;
+		2'b10 : db_buffer = 16'd260;
+		2'b11 : db_buffer = 16'd130;
 	endcase
 end
-	
+
+// read register
+always @(posedge clk, negedge rst) begin
+	if (!rst) 
+		read_reg <= 8'hxx; // don't care whats there on reset
+	else if (read_en) // latch databus on read signal
+		read_reg <= databus;
+	else
+		read_reg <= read_reg; // intentional latch
+end
 
 // state flop
 always_ff @(posedge clk, negedge rst) begin
@@ -60,12 +68,13 @@ always_ff @(posedge clk, negedge rst) begin
 		state <= next_state;
 end
 
+// TODO: we could make this more robust with tbr/rda signals
 always_comb begin
 	next_state = DB_LOW_LOAD; // default state
 	iocs = 1'b0;
 	iorw = 1'b0;
 	ioaddr = 2'b00;
-	
+	read_en = 1'b0;
 	
 	case(state)
 		DB_LOW_LOAD: // first thing we do is load division buffer values
@@ -83,70 +92,35 @@ always_comb begin
 				iorw = 1'b0;
 				ioaddr = 2'b11; // address for db_high
 				write_data = db_buffer [15:8];
-				next_state = RUNNING;
+				next_state = IDLE;
 			end
 				
-		RUNNING: // this state should wait for rx input and then echo it back on txd for demo
+		IDLE: // this state should wait for rx input and then echo it back on txd for demo
 			begin
-				next_state = RUNNING;
+				if (rda) begin // signal read to put receive buffer on databus, read next cycle
+					iocs = 1'b1;
+					iorw = 1'b1;
+					ioaddr = 2'b00;
+					next_state = READ;
+				end
+				else
+					next_state = IDLE;
+			end
+		READ:
+			begin
+				read_en = 1'b1; // latch databus (may need to be in previous state
+				next_state = WRITE;
+			end
+		WRITE:
+			begin
+				iocs = 1'b1;
+				iorw = 1'b0;
+				ioaddr = 2'b00;
+				write_data = read_reg;
+				next_state = IDLE;
 			
 			end
 	endcase
 end
 
-			/*
-always @(negedge rst) begin
-	iocs = 1'b0;
-	iorw = 1'b0;
-	ioaddr = 2'b10;  //division buffer low to start
-	databus = 8'b0;
-	
-	repeat(2) @(negedge clk);
-	
-	databus = db_buffer[7:0];
-	
-	repeat(2) @(negedge clk);
-	
-	iocs = 1'b1;
-	
-	repeat(2) @(negedge clk);
-	
-	iocs = 1'b0;
-	ioaddr = 2'b11;
-	databus = db_buffer[15:8];
-	
-	repeat(2) @(negedge clk);
-
-	iocs = 1'b1;
-
-	repeat(2) @(negedge clk);
-	
-	iocs = 1'b0;
-	ioaddr = 2'b00;
-	databus = 8'b01101101;
-	
-	repeat(2) @(negedge clk);
-	
-	iocs = 1'b1;
-	while(!tbr);
-	
-	repeat(15) @(negedge clk);
-	
-	iocs = 1'b0;
-	iorw = 1'b1;
-	databus = 8'bzzzzzzzz;
-	
-	repeat(2) @(negedge clk);
-	
-	iocs = 1'b1;
-	while(!rda);
-
-	repeat(2) @(negedge clk);
-	
-	$stop;
-
-
-
-end	
-*/
 endmodule

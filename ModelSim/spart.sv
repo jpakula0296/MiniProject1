@@ -54,8 +54,6 @@ logic status_read; // high when reading status register for rda and tbr
 
 
 
-// PUT HERE TO EXPERIMENT, NOT SURE WHY THIS ISN'T WRITING
-logic db_low_en;
 // wire write_data [7:0]; // for reading from databus on write operations
 
 // Instantiate rx and tx modules
@@ -105,12 +103,11 @@ always_ff @(posedge clk, negedge rst) begin
 		division_buffer_high <= division_buffer_high;
 end
 
-assign db_low_en = ioaddr[1] & ~ioaddr[0] & iocs & ~iorw;
 // DB_LOW flop, only load on enable, otherwise hold value
 always_ff @(posedge clk, negedge rst) begin
 	if (!rst)
 		division_buffer_low <= 8'b0;
-	else if (db_low_en)
+	else if (ioaddr[1] & ~ioaddr[0] & iocs & ~iorw)
 		division_buffer_low <= databus;
 	else
 		division_buffer_low <= division_buffer_low;
