@@ -1,16 +1,16 @@
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
+// Company: UW Madison
+// Engineer: Jesse Pakula, Eric Christanson
 // 
-// Create Date:    
-// Design Name: 
+// Create Date:  9/11/18  
+// Design Name:  SPART
 // Module Name:    driver 
-// Project Name: 
+// Project Name: spart
 // Target Devices: 
 // Tool versions: 
-// Description: 
+// Description: mimics processor and sends info from receive buffer to transmit buffer of spart
 //
-// Dependencies: 
+// Dependencies: spart
 //
 // Revision: 
 // Revision 0.01 - File Created
@@ -29,13 +29,11 @@ module driver(
     inout [7:0] databus
     );
  
-reg [15:0] db_buffer; // holds divisor buffer to be loaded to control module on reset
+reg [15:0] db_buffer;
 logic [7:0] write_data; // multiplexed in state machine between db_buffer and read_reg
-
 logic [1:0] write_select;
 reg read_en;
 reg write_en;
-
 reg [7:0] read_reg;
 reg [7:0] read_reg0; // these are used in a circular buffer and multiplexed to read_reg based on counts
 reg [7:0] read_reg1;
@@ -44,9 +42,6 @@ reg [7:0] read_reg3;
 reg [1:0] write_cnt;
 reg [1:0] read_cnt;
 
-// fifo stuff that might fix junk data being sent occasionally
-// reg [39:0] fifo; // holding 5 data bytes
-// reg [2:0] fifo_cnt;
 
  
 typedef enum reg [2:0] {DB_LOW_LOAD, DB_HIGH_LOAD, IDLE, WRITE} state_t;
@@ -57,10 +52,10 @@ assign databus = (iocs & ~iorw) ? write_data : 8'bz;
 
 always_comb begin
 	case(br_cfg)
-		2'b00 : db_buffer = 16'd10416; // 38400 baud
-		2'b01 : db_buffer = 16'd5208;  // 19200 baud
-		2'b10 : db_buffer = 16'd2604;  // 9600 baud
-		2'b11 : db_buffer = 16'd1302;  // 4800 baud
+		2'b00 : db_buffer = 16'd10416; // 
+		2'b01 : db_buffer = 16'd5208;
+		2'b10 : db_buffer = 16'd2604;
+		2'b11 : db_buffer = 16'd1302;
 	endcase
 end
 
@@ -95,7 +90,6 @@ end
 		
 
 // latch databus when in approptiate register based on read count
-
 always @(posedge clk, negedge rst) begin
 	if (!rst)
 		read_reg0 <= 8'h00;
@@ -132,7 +126,13 @@ always @(posedge clk, negedge rst) begin
 		read_reg3 <= read_reg3;
 end
 
-
+// state flop
+always_ff @(posedge clk, negedge rst) begin
+	if (!rst) 
+		state <= DB_LOW_LOAD;
+	else
+		state <= next_state;
+end
 
 // write_data multiplexer
 always_comb begin
@@ -144,21 +144,15 @@ always_comb begin
 	endcase
 end
 
-// state flop
-always_ff @(posedge clk, negedge rst) begin
-	if (!rst) 
-		state <= DB_LOW_LOAD; // first thing we do is load divisor buffer
-	else
-		state <= next_state;
-end
 
 always begin
 	next_state = DB_LOW_LOAD; // default state
-	iocs = 1'b0; // don't do anything in IDLE
+	iocs = 1'b0;
 	iorw = 1'b0;
 	ioaddr = 2'b00;
 	read_en = 1'b0;
 	write_select = 2'b00;
+	write_en = 1'b0;
 	
 	case(state)
 		DB_LOW_LOAD: // first thing we do is load division buffer values
@@ -192,12 +186,13 @@ always begin
 					next_state = IDLE;
 			end
 
-		WRITE: // read_reg has latched recieve buffer, can transmit it now
+		WRITE:
 			begin
-				if (tbr) begin // only allow transmit if tbr is high, otherwise we overwrite data
+				if (tbr) begin 
 					iocs = 1'b1;
 					iorw = 1'b0;
 					ioaddr = 2'b00;
+					write_en = 1'b1;
 					next_state = IDLE;
 				end
 				else
