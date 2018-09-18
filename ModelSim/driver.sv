@@ -20,11 +20,11 @@
 module driver(
     input clk,
     input rst,
-    input [1:0] br_cfg,
-    output logic iocs,
-    output logic iorw,
-    input rda,
-    input tbr,
+    input [1:0] br_cfg, // connected to switches, determine divisor for loading correct baud rate
+    output logic iocs,  // chip select, SPART does nothing if this is low
+    output logic iorw,  // read not write bit, databus is tristated based on this
+    input rda,          // read data available, read from receive buffer when this goes high from SPART
+    input tbr,				// transmit buffer ready, high when transmit buffer can receive new data
     output logic [1:0] ioaddr,
     inout [7:0] databus
     );
@@ -159,11 +159,15 @@ always begin
 
 		WRITE:
 			begin
-				iocs = 1'b1;
-				iorw = 1'b0;
-				ioaddr = 2'b00;
-				write_en = 1'b1;
-				next_state = IDLE;
+				if (tbr) begin 
+					iocs = 1'b1;
+					iorw = 1'b0;
+					ioaddr = 2'b00;
+					write_en = 1'b1;
+					next_state = IDLE;
+				end
+				else
+					next_state = WRITE;
 			
 			end
 	endcase

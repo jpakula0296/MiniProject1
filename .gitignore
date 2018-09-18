@@ -4,4 +4,4 @@
 vsim*
 *.vstf
 *.bak
-initial_files
+initial_files/

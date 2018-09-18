@@ -21,27 +21,24 @@ module spart(
     input clk,
     input rst,
     input iocs,  // I/O chip select, basically enable in this project
-    input iorw,	 // I/O Read Not Write bit
+    input iorw,	 // I/O Read Not Write bit, databus tristated based on this
 //	input [9:0] rx_shift_reg, // connected from rx module, latched when rx_done goes high
 	output logic [7:0] transmit_buffer, // tx module will latch this after write operation to it
 	output logic tx_begin, // kicks off transmission when it goes high
 
-//	input rx_done, // from rx module, latch shift reg in receive buffer and put rda high when asserted
     output logic rda,  // receive data available right when rx module signal rx_done
-//    input tbr,  // transmit buffer ready
+    output tbr,  // transmit buffer ready
 	
-	output logic [15:0] divisor_buffer, // this is needed by rx/tx modules
-    input [1:0] ioaddr,
-    inout [7:0] databus,
+	output logic [15:0] divisor_buffer, // this is needed by rx/tx modules to determine baud rate
+    input [1:0] ioaddr, // determines register to read/write from
+    inout [7:0] databus, // between SPART and processor
 	
-	// not sure how to handle having these lines in different modules with the wrapper
-	// just leaving them as are for now
 	input rxd,
 	output txd
 
     );
 	
-reg [7:0] division_buffer_low;
+reg [7:0] division_buffer_low;	// registers written to for divisor buffer
 reg [7:0] division_buffer_high;
 reg [7:0] receive_buffer;
 reg [7:0] status;
@@ -53,7 +50,6 @@ logic status_read; // high when reading status register for rda and tbr
 
 wire [9:0] rx_shift_reg;
 wire rx_done;
-wire tbr;
 
 
 // wire write_data [7:0]; // for reading from databus on write operations
