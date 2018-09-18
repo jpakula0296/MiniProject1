@@ -40,26 +40,24 @@ module spart(
 	
 reg [7:0] division_buffer_low;	// registers written to for divisor buffer
 reg [7:0] division_buffer_high;
-reg [7:0] receive_buffer;
-reg [7:0] status;
+reg [7:0] receive_buffer; // latches rx_shift reg once all data has been sent
+reg [7:0] status; // holds tbr and rda
 reg [7:0] read_data; // multiplexed output of receive buffer and status reg for databus read (ioaddr)
 					 
-logic clr;
 logic status_register_read;
 logic status_read; // high when reading status register for rda and tbr
 
-wire [9:0] rx_shift_reg;
-wire rx_done;
+wire [9:0] rx_shift_reg; // shifts in data bits on rx line, from rx module
+wire rx_done; // from rx module, high when all data has been sent, indicating we want to latch
 
 
-// wire write_data [7:0]; // for reading from databus on write operations
 
 // Instantiate rx and tx modules
 spart_rx rx_mod(
 	.clk (clk),
 	.rst (rst),
-	.rxd (rxd), // leave rxd unconnected since this comes from workstation, not connected to control
-	.divisor_buffer (divisor_buffer), // connect directly
+	.rxd (rxd), 
+	.divisor_buffer (divisor_buffer), 
 	.rx_done (rx_done),
 	.rx_shift_reg (rx_shift_reg));
 	
@@ -72,9 +70,6 @@ spart_tx tx_mod(
 	.divisor_buffer (divisor_buffer),
 	.txd (txd)); // connected to workstation, not the control unit
 
-// states for SPART
-typedef enum reg [1:0] {IDLE, RECEIVE_READ, TRANSMIT_WRITE} state_t;
-state_t state, next_state;
 
 // put receive buffer or status reg (depending on ioaddr) on databus if read op
 // otherwise high z since SPART will be reading it
