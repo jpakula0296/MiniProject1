@@ -38,7 +38,7 @@ module spart(
 	// just leaving them as are for now
 	input rxd,
 	output txd
-	
+
     );
 	
 reg [7:0] division_buffer_low;

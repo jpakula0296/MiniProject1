@@ -11,10 +11,20 @@ reg [1:0] br_cfg;
 reg rxd;
 
 wire rda;
+wire tbr;
+wire [7:0] databus;
+wire [9:0] rx_shift_reg;
+wire [7:0] transmit_buffer;
+wire tx_begin;
+wire rx_done;
+wire [15:0] divisor_buffer;
+wire txd;
+
+
 reg [7:0] correct_value;
 
 
-reg [7:0] baud_clk = 651;
+reg [7:0] baud_clk = 130;
 	
 driver driver_DUT(
 	.clk (clk),
@@ -27,6 +37,7 @@ driver driver_DUT(
 	.ioaddr (ioaddr),
 	.databus (databus)
 	);
+
 	
 spart spart_DUT(
 	.clk (clk),
@@ -46,31 +57,10 @@ spart spart_DUT(
 	.rxd (rxd)
 	);
 
-/*
-spart_rx rx_DUT(
-	.clk (clk),
-	.rst (rst),
-	.rxd (rxd),
-	.divisor_buffer (divisor_buffer),
-	.rx_done (rx_done),
-	.rx_shift_reg (rx_shift_reg)
-	);
-	
-spart_tx tx_DUT(
-	.clk (clk),
-	.rst (rst),
-	.tx_begin (tx_begin),
-	.transmit_buffer (transmit_buffer),
-	.divisor_buffer (divisor_buffer),
-	.tbr (tbr),
-	.txd (txd)
-	);
-*/
-
-
 initial begin
 //////////////////////////////////  LOAD DIVISION BUFFER  /////////////////////
 	clk = 1'b1;
+	rxd = 1'b1;
 	rst = 1'b0; // start with reset asserted
 	br_cfg = 2'b11; // load fastest baud for testing
 	repeat (2) @(posedge clk);

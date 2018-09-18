@@ -82,7 +82,7 @@ always_ff @(posedge clk, negedge rst) begin
 	else if (rx_buf_full)
 		bit_cnt <= 4'hA; // reload bit counter every time our buffer is full
 	else
-		bit_cnt <= 4'hA; // reload 10 when enable goes low
+		bit_cnt <= bit_cnt; // reload 10 when enable goes low
 end
 assign rx_buf_full = (bit_cnt == 4'h0); // signal buffer is full after stop bit
 
