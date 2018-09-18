@@ -44,12 +44,9 @@ spart spart_DUT(
 	.rst (rst),
 	.iocs (iocs),
 	.iorw (iorw),
-	.rx_shift_reg (rx_shift_reg),
 	.transmit_buffer (transmit_buffer),
 	.tx_begin (tx_begin),
-	.rx_done (rx_done),
 	.rda (rda),
-	.tbr (tbr),
 	.divisor_buffer (divisor_buffer),
 	.ioaddr (ioaddr),
 	.databus (databus),
@@ -74,7 +71,7 @@ initial begin
 	
 	
 	// transmit h'A5 as in example
-	correct_value = 8'hA5;
+	correct_value = 8'b01010101;
 	//start bit
 	rxd= 1'b0;
 	repeat(baud_clk) @(negedge clk);
@@ -95,7 +92,7 @@ initial begin
 	repeat (baud_clk) @(negedge clk);
 	// stop bit
 	rxd= 1'b1;
-	repeat (baud_clk*5) @(negedge clk);
+	repeat (baud_clk*12) @(negedge clk); // wait for tx to send data out
 	$stop;
 	
 	// transmit h'E7 as in example

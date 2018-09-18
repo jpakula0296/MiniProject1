@@ -3,3 +3,4 @@
 *.mti
 vsim*
 *.vstf
+/initial_files
