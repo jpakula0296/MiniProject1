@@ -33,11 +33,14 @@ reg [15:0] db_buffer;
 logic [7:0] write_data; // multiplexed in state machine between db_buffer and read_reg
 logic [1:0] write_select;
 reg read_en;
-reg [39:0] fifo; // holding 5 data bytes
-reg [2:0] fifo_cnt;
 reg write_en;
 reg [7:0] read_reg;
-wire fifo_empty;
+reg [7:0] read_reg0; // these are used in a circular buffer and multiplexed to read_reg based on counts
+reg [7:0] read_reg1;
+reg [7:0] read_reg2;
+reg [7:0] read_reg3;
+reg [1:0] write_cnt;
+reg [1:0] read_cnt;
 
 
  
@@ -47,7 +50,6 @@ state_t state, next_state;
 // tristate databus on read operations or when not selected
 assign databus = (iocs & ~iorw) ? write_data : 8'bz;
 
-// TODO: MAKE SURE LOADED IN VALUES ARE CORRECT
 always_comb begin
 	case(br_cfg)
 		2'b00 : db_buffer = 16'd10416; // 
@@ -57,43 +59,71 @@ always_comb begin
 	endcase
 end
 
-assign fifo_empty = (fifo_cnt == 3'h0);
 
-// fifo count if we want to use one later
-/* fifo_cnt flop to keep track of when we have data to transmit
+always_comb begin
+	case(write_cnt)
+		2'b00 : read_reg = read_reg0; // basically a circular buffer so we don't overwrite data when receiving it too quickly
+		2'b01 : read_reg = read_reg1;
+		2'b10 : read_reg = read_reg2;
+		2'b11 : read_reg = read_reg3;
+	endcase
+end
+
+// counters for how many writes and how many reads we've done
 always @(posedge clk, negedge rst) begin
 	if (!rst)
-		fifo_cnt <= 3'h0;
-	else if (read_en)
-		fifo_cnt <= fifo_cnt + 1'b1;
+		write_cnt <= 2'b00;
 	else if (write_en)
-		fifo_cnt <= fifo_cnt - 1'b1;
-	else 
-		fifo_cnt <= fifo_cnt;
-end
-*/
-
-// fifo implementation 
-/*
-always @(posedge clk, negedge rst) begin
-	if (!rst) 
-		fifo <= 40'h0000000000; // don't care whats there on reset
-	else if (read_en) // latch databus on read signal
-		fifo <= {fifo[31:0], databus};
-	else if (write_en)
-		fifo <= {8'h00, fifo[39:8]};
+		write_cnt <= write_cnt + 2'b01;
 	else
-		fifo <= fifo; // intentional latch
+		write_cnt <= write_cnt;
 end
-*/
 
 always @(posedge clk, negedge rst) begin
 	if (!rst)
-		read_reg <= 8'h00;
+		read_cnt <= 2'b00;
 	else if (read_en)
-		read_reg <= databus;
+		read_cnt <= read_cnt + 2'b01;
 	else
-		read_reg <= read_reg;
+		read_cnt <= read_cnt;
+end
+		
+
+// latch databus when in approptiate register based on read count
+always @(posedge clk, negedge rst) begin
+	if (!rst)
+		read_reg0 <= 8'h00;
+	else if (read_en && (read_cnt == 2'b00))
+		read_reg0 <= databus;
+	else
+		read_reg0 <= read_reg0;
+end
+
+always @(posedge clk, negedge rst) begin
+	if (!rst)
+		read_reg1 <= 8'h00;
+	else if (read_en && (read_cnt == 2'b01))
+		read_reg1 <= databus;
+	else
+		read_reg1 <= read_reg1;
+end
+
+always @(posedge clk, negedge rst) begin
+	if (!rst)
+		read_reg2 <= 8'h00;
+	else if (read_en && (read_cnt == 2'b10))
+		read_reg2 <= databus;
+	else
+		read_reg2 <= read_reg2;
+end
+
+always @(posedge clk, negedge rst) begin
+	if (!rst)
+		read_reg3 <= 8'h00;
+	else if (read_en && (read_cnt == 2'b11))
+		read_reg3 <= databus;
+	else
+		read_reg3 <= read_reg3;
 end
 
 // state flop
@@ -115,7 +145,6 @@ always_comb begin
 end
 
 
-// TODO: we could make this more robust with tbr/rda signals
 always begin
 	next_state = DB_LOW_LOAD; // default state
 	iocs = 1'b0;
