@@ -3,3 +3,5 @@
 *.mti
 vsim*
 *.vstf
+*.bak
+initial_files
